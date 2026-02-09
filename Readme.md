@@ -75,7 +75,7 @@ EduWatch
 ### Frameworks & Tools
 - Python (FastAPI / Flask)
 - VS Code
-- Git & Bitbucket (Version Control)
+- Git & Github
 - FFmpeg (Media processing)
 
 ---
@@ -84,7 +84,10 @@ EduWatch
 - **Project Name:** EduWatch  
 - **Project Type:** College Mini Project  
 - **Team Size:** 3 Members  
-- **Version Control:** Bitbucket (Private Repository)  
+- **Team lead:** Aashik Basha A
+- **Team co-Lead:** Akash A
+- **Team member:** Ajith G
+- **Version Control:** Github (Private Repository)  
 
 ---
 
