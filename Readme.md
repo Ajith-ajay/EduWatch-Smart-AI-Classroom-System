@@ -8,6 +8,8 @@ EduWatch is an AI-driven smart education system designed to enhance classroom mo
 ## 📌 Project Motivation
 With the rapid digital transformation in education, there is a growing need for intelligent systems that can monitor, analyze, and enhance classroom experiences. EduWatch aims to bridge this gap by combining AI technologies to make education smarter, more inclusive, and globally accessible while preserving cultural and linguistic identity.
 
+
+
 ---
 
 ## 🎯 Objectives
