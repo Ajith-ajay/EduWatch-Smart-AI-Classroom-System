@@ -75,7 +75,7 @@ EduWatch
 ### Frameworks & Tools
 - Python (FastAPI / Flask)
 - VS Code
-- Git & Bitbucket (Version Control)
+- Git & Github
 - FFmpeg (Media processing)
 
 ---
@@ -84,7 +84,10 @@ EduWatch
 - **Project Name:** EduWatch  
 - **Project Type:** College Mini Project  
 - **Team Size:** 3 Members  
-- **Version Control:** Bitbucket (Private Repository)  
+- **Team lead:** Aashik Basha A
+- **Team co-Lead:** Akash A
+- **Team member:** Ajith G
+- **Version Control:** Github (Private Repository)  
 
 ---
 
@@ -101,18 +104,36 @@ EduWatch
 
 ```bash
 # Clone repository
-git clone https://bitbucket.org/<your-username>/eduwatch.git
+git clone https://github.com/Ajith-ajay/EduWatch-Smart-AI-Classroom-System.git
 
 # Navigate to project
-cd EduWatch
+cd EduWatch-Smart-AI-Classroom-System
 
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
+venv\Scripts\activate   # Linux/Mac os: source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Run backend
 python backend/app.py
+```
+
+## Best prefer the Conda Environmrnt for best for the ML Training
+
+```bash
+conda create --name eduwatch python=3.10
+
+conda activate eduwatch
+
+pip install -r requirements.txt
+```
+
+## To activate the conda and use it in anywhere (any terminal)
+
+    - open anaconda prompt and run the command
+
+```bash
+conda init powershell      
 ```
