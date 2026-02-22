@@ -1,13 +1,13 @@
-def decide(person, gesture, voice):
+def decide(teacher_detected, person_detected, gesture_detected, voice_detected):
 
-    if person and gesture and voice:
+    if teacher_detected and gesture_detected and voice_detected and person_detected:
+
         return "TEACHING ACTIVE", (0,255,0)
 
-    elif person and gesture:
-        return "TEACHING LIKELY", (0,255,255)
+    elif teacher_detected and (gesture_detected or voice_detected) and person_detected:
 
-    elif person:
-        return "TEACHER PRESENT", (255,0,0)
+        return "TEACHER PRESENT", (0,255,255)
 
     else:
+
         return "NO TEACHER", (0,0,255)

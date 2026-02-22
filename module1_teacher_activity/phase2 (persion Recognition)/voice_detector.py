@@ -1,26 +1,80 @@
 import sounddevice as sd
 import numpy as np
-from config import VOICE_THRESHOLD
+import webrtcvad
+import collections
 
-def detect_voice():
+# WebRTC works only at these sample rates
+SAMPLE_RATE = 16000
 
-    duration = 0.8
-    fs = 48000
+# Frame duration must be 10, 20, or 30 ms
+FRAME_DURATION = 30  # ms
 
-    audio = sd.rec(int(duration * fs),
-                   samplerate=fs,
-                   channels=1,
-                   dtype='float32',
-                   device=9)  # Adjust device index as needed
+# Aggressiveness mode:kf
+# 0 = least aggressive
+# 3 = most aggressive (recommended for classroom)
+VAD_MODE = 3
 
-    sd.wait()
+# Continuous speech frames required to confirm teaching
+SPEECH_FRAME_THRESHOLD = 8
 
-    volume = np.linalg.norm(audio)
 
-    print("Volume:", volume)
+class VoiceDetector:
 
-    if volume > VOICE_THRESHOLD:
-        print(f"Voice detected with volume: {volume:.2f}")
-        return True
-    else:
-        return False
+    def __init__(self):
+
+        self.vad = webrtcvad.Vad(VAD_MODE)
+
+        self.frame_size = int(SAMPLE_RATE * FRAME_DURATION / 1000)
+
+        self.speech_buffer = collections.deque(maxlen=20)
+
+
+    def record_audio(self, duration=1.5):
+
+        audio = sd.rec(int(duration * SAMPLE_RATE),
+                       samplerate=SAMPLE_RATE,
+                       channels=1,
+                       dtype='int16')
+
+        sd.wait()
+
+        return audio.flatten()
+
+
+    def detect_voice(self):
+
+        audio = self.record_audio()
+
+        speech_frames = 0
+        total_frames = 0
+
+        for i in range(0, len(audio), self.frame_size):
+
+            frame = audio[i:i+self.frame_size]
+
+            if len(frame) != self.frame_size:
+                continue
+
+            frame_bytes = frame.tobytes()
+
+            is_speech = self.vad.is_speech(frame_bytes, SAMPLE_RATE)
+
+            total_frames += 1
+
+            if is_speech:
+                speech_frames += 1
+
+        speech_ratio = speech_frames / total_frames if total_frames > 0 else 0
+
+        print(f"Speech frames: {speech_frames}/{total_frames}  Ratio: {speech_ratio:.2f}")
+
+        # Confirm teaching speech only if continuous speech exists
+        if speech_frames >= SPEECH_FRAME_THRESHOLD:
+
+            print("Teaching speech detected")
+
+            return True
+
+        else:
+
+            return False
