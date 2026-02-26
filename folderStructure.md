@@ -81,6 +81,33 @@ apps/api/
 └── tsconfig.json
 ```
 
+```bash
+src/
+│
+├── main.ts
+├── app.module.ts
+│
+├── config/
+│   └── configuration.ts
+│
+├── prisma/
+│   └── prisma.service.ts
+│
+├── modules/
+│   └── users/
+│       ├── users.module.ts
+│       ├── users.controller.ts
+│       ├── users.service.ts
+│       ├── dto/
+│       └── entities/
+│
+└── common/
+    ├── filters/
+    ├── guards/
+    ├── interceptors/
+    └── decorators/
+```
+
 ## AI Services 
 
 ```bash
