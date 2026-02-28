@@ -5,7 +5,8 @@
 \i migrations/004_create_timetable.sql
 \i migrations/005_create_substitution.sql
 \i migrations/006_create_attendance_log.sql
-\i migrations/007_constraints_and_indexes.sql
+\i migrations/007_create_user.sql
+\i migrations/008_constraints_and_indexes.sql
 
 -- Run seeds
 \i seeds/seed_teachers.sql

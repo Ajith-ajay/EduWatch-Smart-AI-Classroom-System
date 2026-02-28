@@ -14,10 +14,6 @@ export class CreateTeacherDto {
 
   @IsOptional()
   @IsString()
-  subject?: string;
-
-  @IsOptional()
-  @IsString()
   phone?: string;
 
   @IsOptional()

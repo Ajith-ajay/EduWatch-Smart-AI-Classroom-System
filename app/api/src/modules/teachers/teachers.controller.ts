@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Put,
+  Delete,
   Param,
   Body,
   UseInterceptors,
@@ -25,7 +26,7 @@ export class TeachersController {
     @Body() dto: CreateTeacherDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    const imagePath = file ? `/uploads/${file.filename}` : undefined;
+    const imagePath = file ? `/uploads/staff/${file.filename}` : undefined;
     return this.teachersService.create(dto, imagePath);
   }
 
@@ -37,10 +38,19 @@ export class TeachersController {
 
   // UPDATE TEACHER
   @Put(':id')
+  @UseInterceptors(FileInterceptor('staff_image'))
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateTeacherDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.teachersService.update(id, dto);
+    const imagePath = file ? `/uploads/staff/${file.filename}` : undefined;
+    return this.teachersService.update(id, dto, imagePath);
+  }
+
+  // DELETE TEACHER
+  @Delete(':id')
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    return this.teachersService.delete(id);
   }
 }

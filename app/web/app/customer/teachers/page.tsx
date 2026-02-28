@@ -1,123 +1,165 @@
 'use client';
 
+import api from '@/lib/api';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function TeachersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [addMode, setAddMode] = useState<'single' | 'bulk'>('single');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
+
+  const urlParser = (path: string) => {
+    return path.startsWith('http') ? path : `${process.env.NEXT_PUBLIC_BASE_URL}${path}`;
+  } 
+
+  type Teacher = {
+    teacher_id: string;
+    full_name: string;
+    email: string;
+    department: string;
+    phone: string;
+    staff_image_path: string;
+    classes?: number;
+    students?: number;
+  };
 
   const [newTeacher, setNewTeacher] = useState({
-    name: '',
+    full_name: '',
     email: '',
     department: '',
-    subject: '',
     phone: '',
     qualification: '',
-    image: null as string | null,
+    staff_image_path: null as string | null,
   });
 
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [excelFile, setExcelFile] = useState<File | null>(null);
 
   // Teachers data with images (using placeholder)
-  const [teachers, setTeachers] = useState([
-    {
-      id: 'T001',
-      name: 'Dr. Rajesh Kumar',
-      email: 'rajesh.kumar@itech.edu',
-      department: 'Computer Science',
-      subject: 'Data Structures',
-      phone: '+91-98765-43210',
-      qualification: 'Ph.D',
-      image: '👨‍🏫',
-      classes: 3,
-      students: 125,
-      avgEngagement: 89,
-    },
-    {
-      id: 'T002',
-      name: 'Prof. Priya Sharma',
-      email: 'priya.sharma@itech.edu',
-      department: 'Computer Science',
-      subject: 'Web Development',
-      phone: '+91-98765-43211',
-      qualification: 'M.Tech',
-      image: '👩‍🏫',
-      classes: 4,
-      students: 152,
-      avgEngagement: 92,
-    },
-    {
-      id: 'T003',
-      name: 'Dr. Amit Patel',
-      email: 'amit.patel@itech.edu',
-      department: 'Computer Science',
-      subject: 'Database Design',
-      phone: '+91-98765-43212',
-      qualification: 'Ph.D',
-      image: '👨‍🏫',
-      classes: 3,
-      students: 130,
-      avgEngagement: 85,
-    },
-    {
-      id: 'T004',
-      name: 'Prof. Neha Singh',
-      email: 'neha.singh@itech.edu',
-      department: 'Computer Science',
-      subject: 'Software Engineering',
-      phone: '+91-98765-43213',
-      qualification: 'M.Tech',
-      image: '👩‍🏫',
-      classes: 2,
-      students: 95,
-      avgEngagement: 88,
-    },
-    {
-      id: 'T005',
-      name: 'Dr. Vikram Desai',
-      email: 'vikram.desai@itech.edu',
-      department: 'ECE',
-      subject: 'Digital Electronics',
-      phone: '+91-98765-43214',
-      qualification: 'Ph.D',
-      image: '👨‍🏫',
-      classes: 3,
-      students: 115,
-      avgEngagement: 86,
-    },
-  ]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+
+  useEffect(() => {
+    const fetchTeacherData = async () => {
+      try {
+        const response = await api.get('/teachers');
+        setTeachers(response.data);
+        console.log("Fetched Teachers", response.data);
+        
+      } catch (error) {
+        console.error("Error fetching the teacher data", error);        
+      }
+    }
+
+    fetchTeacherData();
+  }, []);
 
   const filteredTeachers = teachers.filter(
     (teacher) =>
-      teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.subject.toLowerCase().includes(searchTerm.toLowerCase())
+      teacher.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      teacher.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddTeacher = () => {
-    if (newTeacher.name && newTeacher.email && newTeacher.subject) {
-      const teacher = {
-        id: `T${teachers.length + 1}`.padStart(4, '0'),
-        ...newTeacher,
-        image: '👨‍🏫',
-        classes: 0,
-        students: 0,
-        avgEngagement: 0,
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
       };
-      setTeachers([...teachers, teacher as any]);
-      setNewTeacher({
-        name: '',
-        email: '',
-        department: '',
-        subject: '',
-        phone: '',
-        qualification: '',
-        image: null,
-      });
-      setShowAddModal(false);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setIsEditMode(false);
+    setSelectedTeacherId(null);
+    setNewTeacher({
+      full_name: '',
+      email: '',
+      department: '',
+      phone: '',
+      qualification: '',
+      staff_image_path: null,
+    });
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleEditTeacher = (teacher: Teacher) => {
+    setIsEditMode(true);
+    setSelectedTeacherId(teacher.teacher_id);
+    setNewTeacher({
+      full_name: teacher.full_name,
+      email: teacher.email,
+      department: teacher.department || '',
+      phone: teacher.phone || '',
+      qualification: '',
+      staff_image_path: teacher.staff_image_path,
+    });
+    // Set preview to existing image
+    if (teacher.staff_image_path) {
+      setImagePreview(urlParser(teacher.staff_image_path));
+    }
+    setShowAddModal(true);
+  };
+
+  const handleAddTeacher = async () => {
+    if (newTeacher.full_name && newTeacher.email) {
+      try {
+        // Create FormData for multipart/form-data
+        const formData = new FormData();
+        formData.append('full_name', newTeacher.full_name);
+        formData.append('email', newTeacher.email);
+        formData.append('department', newTeacher.department || '');
+        formData.append('phone', newTeacher.phone || '');
+        formData.append('qualification', newTeacher.qualification || '');
+        
+        // Add image file if selected
+        if (imageFile) {
+          formData.append('staff_image', imageFile);
+        }
+
+        let response;
+        if (isEditMode && selectedTeacherId) {
+          // Update existing teacher
+          response = await api.put(`/teachers/${selectedTeacherId}`, formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          console.log('Teacher updated:', response.data);
+        } else {
+          // Create new teacher
+          response = await api.post('/teachers', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          console.log('Teacher created:', response.data);
+        }
+        
+        // Refresh teachers list
+        const teachersResponse = await api.get('/teachers');
+        setTeachers(teachersResponse.data);
+
+        // Reset form and close modal
+        closeAddModal();
+        
+        alert(isEditMode ? 'Teacher updated successfully!' : 'Teacher added successfully!');
+      } catch (error) {
+        console.error(`Error ${isEditMode ? 'updating' : 'adding'} teacher:`, error);
+        alert(`Failed to ${isEditMode ? 'update' : 'add'} teacher. Please try again.`);
+      }
+    } else {
+      alert('Please fill in all required fields');
     }
   };
 
@@ -127,6 +169,27 @@ export default function TeachersPage() {
       alert(`Excel file "${excelFile.name}" uploaded successfully! (Mock operation)`);
       setExcelFile(null);
       setShowBulkModal(false);
+    }
+  };
+
+  const handleDeleteTeacher = async (teacher: Teacher) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ${teacher.full_name}?\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await api.delete(`/teachers/${teacher.teacher_id}`);
+      
+      // Refresh teachers list
+      const teachersResponse = await api.get('/teachers');
+      setTeachers(teachersResponse.data);
+      
+      alert('Teacher deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting teacher:', error);
+      alert('Failed to delete teacher. Please try again.');
     }
   };
 
@@ -191,18 +254,18 @@ export default function TeachersPage() {
               <p className="text-zinc-600 text-sm mb-2">Active</p>
               <p className="text-3xl font-bold text-green-600">{teachers.length}</p>
             </div>
-            <div className="bg-white border border-zinc-200 rounded-lg p-6">
+            {/* <div className="bg-white border border-zinc-200 rounded-lg p-6">
               <p className="text-zinc-600 text-sm mb-2">Total Classes</p>
               <p className="text-3xl font-bold text-zinc-900">
                 {teachers.reduce((sum, t) => sum + t.classes, 0)}
               </p>
-            </div>
-            <div className="bg-white border border-zinc-200 rounded-lg p-6">
+            </div> */}
+            {/* <div className="bg-white border border-zinc-200 rounded-lg p-6">
               <p className="text-zinc-600 text-sm mb-2">Avg Engagement</p>
               <p className="text-3xl font-bold text-zinc-900">
                 {Math.round(teachers.reduce((sum, t) => sum + t.avgEngagement, 0) / teachers.length)}%
               </p>
-            </div>
+            </div> */}
           </div>
 
           {/* Search */}
@@ -220,24 +283,20 @@ export default function TeachersPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredTeachers.map((teacher) => (
               <div
-                key={teacher.id}
+                key={teacher.teacher_id}
                 className="bg-white border border-zinc-200 rounded-lg overflow-hidden hover:border-zinc-900 transition group cursor-pointer"
               >
                 {/* Card Header with Image */}
                 <div className="bg-zinc-100 p-8 flex items-center justify-center">
-                  <div className="text-6xl">{teacher.image}</div>
+                  <img src={urlParser(teacher.staff_image_path)} alt={teacher.full_name} className="w-36 h-36 rounded object-cover" />
                 </div>
 
                 {/* Card Content */}
                 <div className="p-6">
-                  <h3 className="text-lg font-bold text-zinc-900 mb-1">{teacher.name}</h3>
-                  <p className="text-xs text-zinc-500 uppercase tracking-wide mb-4">{teacher.id}</p>
+                  <h3 className="text-lg font-bold text-zinc-900 mb-1">{teacher.full_name}</h3>
+                  <p className="text-xs text-zinc-500 uppercase tracking-wide mb-4">{teacher.teacher_id}</p>
 
                   <div className="space-y-2 mb-6 text-sm">
-                    <div>
-                      <p className="text-zinc-600 text-xs">Subject</p>
-                      <p className="font-medium text-zinc-900">{teacher.subject}</p>
-                    </div>
                     <div>
                       <p className="text-zinc-600 text-xs">Department</p>
                       <p className="font-medium text-zinc-900">{teacher.department}</p>
@@ -246,10 +305,14 @@ export default function TeachersPage() {
                       <p className="text-zinc-600 text-xs">Email</p>
                       <p className="font-medium text-zinc-900 truncate">{teacher.email}</p>
                     </div>
+                    <div>
+                      <p className="text-zinc-600 text-xs">Phone</p>
+                      <p className="font-medium text-zinc-900 truncate">{teacher.phone}</p>
+                    </div>
                   </div>
 
                   {/* Stats */}
-                  <div className="grid grid-cols-3 gap-2 mb-6 py-4 border-t border-b border-zinc-100">
+                  {/* <div className="grid grid-cols-3 gap-2 mb-6 py-4 border-t border-b border-zinc-100">
                     <div className="text-center">
                       <p className="text-2xl font-bold text-zinc-900">{teacher.classes}</p>
                       <p className="text-xs text-zinc-600">Classes</p>
@@ -262,14 +325,20 @@ export default function TeachersPage() {
                       <p className="text-2xl font-bold text-zinc-900">{teacher.avgEngagement}%</p>
                       <p className="text-xs text-zinc-600">Engagement</p>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Actions */}
                   <div className="flex gap-2">
-                    <button className="flex-1 px-3 py-2 border border-zinc-300 text-zinc-900 rounded-lg text-sm font-medium hover:border-zinc-900 transition">
+                    <button 
+                      onClick={() => handleDeleteTeacher(teacher)}
+                      className="flex-1 px-3 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 hover:border-red-500 transition"
+                    >
                       Delete
                     </button>
-                    <button className="flex-1 px-3 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800 transition">
+                    <button 
+                      onClick={() => handleEditTeacher(teacher)}
+                      className="flex-1 px-3 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800 transition"
+                    >
                       Edit
                     </button>
                   </div>
@@ -292,9 +361,9 @@ export default function TeachersPage() {
           <div className="bg-white rounded-lg max-w-2xl w-full">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-zinc-200">
-              <h2 className="text-2xl font-bold">Add New Teacher</h2>
+              <h2 className="text-2xl font-bold">{isEditMode ? 'Edit Teacher' : 'Add New Teacher'}</h2>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={closeAddModal}
                 className="text-xl text-zinc-600 hover:text-zinc-900"
               >
                 ✕
@@ -312,8 +381,8 @@ export default function TeachersPage() {
                     </label>
                     <input
                       type="text"
-                      value={newTeacher.name}
-                      onChange={(e) => setNewTeacher({ ...newTeacher, name: e.target.value })}
+                      value={newTeacher.full_name}
+                      onChange={(e) => setNewTeacher({ ...newTeacher, full_name: e.target.value })}
                       placeholder="Dr. John Doe"
                       className="w-full px-4 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-zinc-900"
                     />
@@ -360,32 +429,28 @@ export default function TeachersPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-zinc-900 mb-2">
-                      Subject *
+                      Qualification
                     </label>
                     <input
                       type="text"
-                      value={newTeacher.subject}
-                      onChange={(e) => setNewTeacher({ ...newTeacher, subject: e.target.value })}
-                      placeholder="Data Structures"
+                      value={newTeacher.qualification}
+                      onChange={(e) => setNewTeacher({ ...newTeacher, qualification: e.target.value })}
+                      placeholder="B.Tech, M.Tech, Ph.D, etc."
                       className="w-full px-4 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-zinc-900"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-zinc-900 mb-2">
-                      Qualification
+                      Profile Image
                     </label>
-                    <select
-                      value={newTeacher.qualification}
-                      onChange={(e) => setNewTeacher({ ...newTeacher, qualification: e.target.value })}
-                      className="w-full px-4 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-zinc-900"
-                    >
-                      <option value="">Select qualification</option>
-                      <option value="B.Tech">B.Tech</option>
-                      <option value="M.Tech">M.Tech</option>
-                      <option value="Ph.D">Ph.D</option>
-                      <option value="MBA">MBA</option>
-                    </select>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="w-full px-4 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-zinc-900 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-zinc-900 file:text-white hover:file:bg-zinc-800 file:cursor-pointer"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">JPG, PNG, GIF (Max 5MB)</p>
                   </div>
                 </div>
 
@@ -394,18 +459,22 @@ export default function TeachersPage() {
                   <p className="text-sm font-semibold text-zinc-600 uppercase mb-4">Card Preview</p>
                   <div className="bg-white rounded-lg border border-zinc-200 overflow-hidden">
                     <div className="bg-zinc-100 p-6 flex items-center justify-center">
-                      <span className="text-5xl">👨‍🏫</span>
+                      {imagePreview ? (
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-20 h-20 rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-5xl">👨‍🏫</span>
+                      )}
                     </div>
                     <div className="p-4">
                       <h4 className="font-bold text-zinc-900 mb-1">
-                        {newTeacher.name || 'Teacher Name'}
+                        {newTeacher.full_name || 'Teacher Name'}
                       </h4>
                       <p className="text-xs text-zinc-600 mb-3">New Teacher</p>
                       <div className="space-y-2 text-xs">
-                        <div>
-                          <p className="text-zinc-600">Subject</p>
-                          <p className="font-medium">{newTeacher.subject || 'Subject'}</p>
-                        </div>
                         <div>
                           <p className="text-zinc-600">Department</p>
                           <p className="font-medium">{newTeacher.department || 'Department'}</p>
@@ -424,7 +493,7 @@ export default function TeachersPage() {
             {/* Modal Footer */}
             <div className="flex gap-3 p-6 border-t border-zinc-200">
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={closeAddModal}
                 className="flex-1 px-4 py-2 border border-zinc-300 text-zinc-900 rounded-lg font-medium hover:border-zinc-900 transition"
               >
                 Cancel
@@ -433,7 +502,7 @@ export default function TeachersPage() {
                 onClick={handleAddTeacher}
                 className="flex-1 px-4 py-2 bg-zinc-900 text-white rounded-lg font-medium hover:bg-zinc-800 transition"
               >
-                Add Teacher
+                {isEditMode ? 'Update Teacher' : 'Add Teacher'}
               </button>
             </div>
           </div>
