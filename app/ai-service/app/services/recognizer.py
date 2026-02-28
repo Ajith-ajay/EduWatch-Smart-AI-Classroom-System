@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PKL_PATH = os.path.join(BASE_DIR, "teacher_encodings.pkl")
+PKL_PATH = os.path.join(BASE_DIR, "..", "models", "teacher_encodings.pkl")
 
 class TeacherRecognizer:
 
