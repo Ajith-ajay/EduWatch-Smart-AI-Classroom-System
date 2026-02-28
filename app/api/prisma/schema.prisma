@@ -7,30 +7,131 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Teacher {
-  teacher_id        Int      @id @default(autoincrement())
-  full_name         String
-  email             String   @unique
-  department        String?
-  subject           String?
-  phone             String?
-  qualification     String?
-  staff_image_path  String?
-  face_encoding_path String
-  voice_encoding_path String?
-  is_active         Boolean  @default(true)
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+model User {
+  id          Int      @id @default(autoincrement())
+  full_name   String
+  email       String   @unique
+  password    String
+  role        String   @default("admin")
+  institution String
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  admin_code  String
 }
 
-model User {
-  id         Int      @id @default(autoincrement())
-  full_name  String
-  email      String   @unique
-  password   String
-  role       String   @default("admin")
-  institution String
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model attendance_log {
+  attendance_id                                          Int       @id @default(autoincrement())
+  class_id                                               Int
+  subject_id                                             Int
+  timetable_id                                           Int
+  scheduled_teacher_id                                   Int
+  detected_teacher_id                                    Int?
+  attendance_date                                        DateTime  @db.Date
+  period_start                                           DateTime  @db.Time(6)
+  period_end                                             DateTime  @db.Time(6)
+  status                                                 String    @db.VarChar(50)
+  confidence_score                                       Decimal?  @db.Decimal(5, 2)
+  locked                                                 Boolean?  @default(false)
+  created_at                                             DateTime? @default(now()) @db.Timestamp(6)
+  classes                                                classes   @relation(fields: [class_id], references: [class_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_class_att")
+  teachers_attendance_log_detected_teacher_idToteachers  teachers? @relation("attendance_log_detected_teacher_idToteachers", fields: [detected_teacher_id], references: [teacher_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_detected_teacher")
+  teachers_attendance_log_scheduled_teacher_idToteachers teachers  @relation("attendance_log_scheduled_teacher_idToteachers", fields: [scheduled_teacher_id], references: [teacher_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_scheduled_teacher")
+  subjects                                               subjects  @relation(fields: [subject_id], references: [subject_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_subject_att")
+  timetable                                              timetable @relation(fields: [timetable_id], references: [timetable_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetable_att")
+
+  @@unique([timetable_id, attendance_date], map: "unique_attendance_per_period")
+}
+
+model classes {
+  class_id       Int              @id @default(autoincrement())
+  class_name     String           @db.VarChar(100)
+  department     String?          @db.VarChar(100)
+  semester       Int?
+  section        String?          @db.VarChar(10)
+  created_at     DateTime?        @default(now()) @db.Timestamp(6)
+  attendance_log attendance_log[]
+  timetable      timetable[]
+}
+
+model subjects {
+  subject_id     Int              @id @default(autoincrement())
+  subject_name   String           @db.VarChar(150)
+  subject_code   String           @unique @db.VarChar(50)
+  department     String?          @db.VarChar(100)
+  created_at     DateTime?        @default(now()) @db.Timestamp(6)
+  attendance_log attendance_log[]
+  timetable      timetable[]
+}
+
+model teacher_substitution {
+  substitution_id                                               Int       @id @default(autoincrement())
+  timetable_id                                                  Int
+  original_teacher_id                                           Int
+  substitute_teacher_id                                         Int
+  substitution_date                                             DateTime  @db.Date
+  approved_by                                                   String?   @db.VarChar(150)
+  created_at                                                    DateTime? @default(now()) @db.Timestamp(6)
+  teachers_teacher_substitution_original_teacher_idToteachers   teachers  @relation("teacher_substitution_original_teacher_idToteachers", fields: [original_teacher_id], references: [teacher_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_original_teacher")
+  teachers_teacher_substitution_substitute_teacher_idToteachers teachers  @relation("teacher_substitution_substitute_teacher_idToteachers", fields: [substitute_teacher_id], references: [teacher_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_substitute_teacher")
+  timetable                                                     timetable @relation(fields: [timetable_id], references: [timetable_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_timetable_sub")
+
+  @@index([substitution_date], map: "idx_substitution_date")
+}
+
+model teachers {
+  teacher_id                                                                Int                    @id @default(autoincrement())
+  full_name                                                                 String                 @db.VarChar(150)
+  email                                                                     String                 @unique @db.VarChar(150)
+  department                                                                String?                @db.VarChar(100)
+  phone                                                                     String?                @db.VarChar(20)
+  qualification                                                             String?                @db.VarChar(50)
+  staff_image_path                                                          String
+  is_active                                                                 Boolean?               @default(true)
+  created_at                                                                DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at                                                                DateTime?              @default(now()) @db.Timestamp(6)
+  attendance_log_attendance_log_detected_teacher_idToteachers               attendance_log[]       @relation("attendance_log_detected_teacher_idToteachers")
+  attendance_log_attendance_log_scheduled_teacher_idToteachers              attendance_log[]       @relation("attendance_log_scheduled_teacher_idToteachers")
+  teacher_substitution_teacher_substitution_original_teacher_idToteachers   teacher_substitution[] @relation("teacher_substitution_original_teacher_idToteachers")
+  teacher_substitution_teacher_substitution_substitute_teacher_idToteachers teacher_substitution[] @relation("teacher_substitution_substitute_teacher_idToteachers")
+  timetable                                                                 timetable[]
+
+  @@index([is_active], map: "idx_teacher_active")
+  @@index([email], map: "idx_teacher_email")
+}
+
+model timetable {
+  timetable_id         Int                    @id @default(autoincrement())
+  class_id             Int
+  subject_id           Int
+  teacher_id           Int
+  day_of_week          String                 @db.VarChar(20)
+  start_time           DateTime               @db.Time(6)
+  end_time             DateTime               @db.Time(6)
+  is_active            Boolean?               @default(true)
+  created_at           DateTime?              @default(now()) @db.Timestamp(6)
+  attendance_log       attendance_log[]
+  teacher_substitution teacher_substitution[]
+  classes              classes                @relation(fields: [class_id], references: [class_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_class")
+  subjects             subjects               @relation(fields: [subject_id], references: [subject_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_subject")
+  teachers             teachers               @relation(fields: [teacher_id], references: [teacher_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_teacher")
+
+  @@index([day_of_week, start_time, end_time], map: "idx_timetable_day_time")
+}
+
+model teachers_archive {
+  teacher_id       Int       @id @default(autoincrement())
+  full_name        String    @db.VarChar(150)
+  email            String    @unique @db.VarChar(150)
+  department       String?   @db.VarChar(100)
+  phone            String?   @db.VarChar(20)
+  qualification    String?   @db.VarChar(50)
+  staff_image_path String
+  is_active        Boolean?  @default(true)
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  updated_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([is_active], map: "idx_teacher_archive_active")
+  @@index([email], map: "idx_teacher_archive_email")
 }

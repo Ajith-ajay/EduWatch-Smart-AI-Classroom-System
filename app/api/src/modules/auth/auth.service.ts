@@ -33,6 +33,7 @@ export class AuthService {
         email: dto.email,
         password: hashedPassword,
         institution: dto.institution,
+        admin_code: dto.admin_code,
       },
     });
 

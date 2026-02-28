@@ -2,6 +2,10 @@
 CREATE INDEX IF NOT EXISTS idx_teacher_email ON teachers(email);
 CREATE INDEX IF NOT EXISTS idx_teacher_active ON teachers(is_active);
 
+-- Constraints and Indexes for teachers_archive Table
+CREATE INDEX IF NOT EXISTS idx_teacher_archive_email ON teachers_archive(email);
+CREATE INDEX IF NOT EXISTS idx_teacher_archive_active ON teachers_archive(is_active);
+
 -- Constraints and Indexes for timetable Table
 CREATE INDEX IF NOT EXISTS idx_timetable_day_time 
 ON timetable(day_of_week, start_time, end_time);
@@ -23,3 +27,6 @@ CHECK (status IN (
 ALTER TABLE attendance_log
 ADD CONSTRAINT unique_attendance_per_period
 UNIQUE (timetable_id, attendance_date);
+
+-- Constraints and Indexes for User Table
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");

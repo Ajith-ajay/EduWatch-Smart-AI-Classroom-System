@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [signupPassword, setSignupPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [institution, setInstitution] = useState('');
+  const [adminCode, setAdminCode] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
   
   const [loading, setLoading] = useState(false);
@@ -62,7 +63,7 @@ export default function LoginPage() {
     setSuccess('');
 
     // Validation
-    if (!fullName || !signupEmail || !signupPassword || !confirmPassword || !institution) {
+    if (!fullName || !signupEmail || !signupPassword || !confirmPassword || !institution || !adminCode) {
       setError('Please fill in all fields');
       setLoading(false);
       return;
@@ -86,7 +87,8 @@ export default function LoginPage() {
         email: signupEmail,
         password: signupPassword,
         confirm_password: confirmPassword,
-        institution: institution
+        institution: institution,
+        admin_code: adminCode
       });
 
       setSuccess('Account created successfully! Redirecting to login...');
@@ -97,6 +99,7 @@ export default function LoginPage() {
         setSignupPassword('');
         setConfirmPassword('');
         setInstitution('');
+        setAdminCode('');
         setAgreeTerms(false);
         setIsLogin(true);
       }, 1000);
@@ -404,6 +407,20 @@ export default function LoginPage() {
                         type="text"
                         value={institution}
                         onChange={(e) => setInstitution(e.target.value)}
+                        placeholder="Your College/University"
+                        className="w-full px-4 py-3 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition"
+                      />
+                    </div>
+
+                    {/* Admin Code */}
+                    <div>
+                      <label className="block text-sm font-semibold text-zinc-900 mb-2">
+                        Admin Code
+                      </label>
+                      <input
+                        type="text"
+                        value={adminCode}
+                        onChange={(e) => setAdminCode(e.target.value)}
                         placeholder="Your College/University"
                         className="w-full px-4 py-3 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition"
                       />

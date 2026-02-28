@@ -15,4 +15,7 @@ export class SignupDto {
 
   @IsNotEmpty()
   institution: string;
+
+  @IsNotEmpty()
+  admin_code: string;
 }

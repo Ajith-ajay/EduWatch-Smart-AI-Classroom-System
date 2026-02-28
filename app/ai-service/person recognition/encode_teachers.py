@@ -9,7 +9,7 @@ import psycopg2
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "teacher_db")
-OUTPUT_PATH = os.path.join(BASE_DIR, "..", "teacher_encodings.pkl")
+OUTPUT_PATH = os.path.join(BASE_DIR, "..", "app", "models", "teacher_encodings.pkl")
 
 DB_CONFIG = {
     "host": "localhost",
