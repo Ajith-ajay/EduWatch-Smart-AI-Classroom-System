@@ -1,6 +1,7 @@
 'use client';
 
 import api from '@/lib/api';
+import { setAuthTokens, setUserSession } from '@/lib/auth';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -36,21 +37,29 @@ export default function LoginPage() {
         email,
         password
       });
+
+      const accessToken = res.data?.access_token;
+      const refreshToken = res.data?.refresh_token;
+
+      if (!accessToken || !refreshToken) {
+        throw new Error('Invalid login response from server');
+      }
+
+      setAuthTokens(accessToken, refreshToken);
       setSuccess('Login successful! Redirecting...');
 
-      // Store login info in localStorage
-      localStorage.setItem('eduwatch_user', JSON.stringify({
+      setUserSession({
         email,
         loginTime: new Date().toISOString(),
-      }));
+      });
 
       setTimeout(() => {
         window.location.href = '/customer';
       }, 1000);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error Login", error);
-      setError('Failed to login. Please try again.');
+      setError(error?.response?.data?.message || 'Failed to login. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -234,7 +243,7 @@ export default function LoginPage() {
         <div className="flex flex-col justify-center px-6 lg:px-12 py-12">
           <div className="max-w-md w-full mx-auto">
             {/* Tab Toggle */}
-            {/* <div className="mb-8 flex gap-2 bg-zinc-100 p-1 rounded-lg">
+            <div className="mb-8 flex gap-2 bg-zinc-100 p-1 rounded-lg">
               <button
                 onClick={() => toggleForm(true)}
                 className={`flex-1 py-2.5 px-4 rounded-md font-semibold text-sm transition-all duration-300 ${
@@ -255,7 +264,7 @@ export default function LoginPage() {
               >
                 Sign Up
               </button>
-            </div> */}
+            </div>
 
             {/* Animated Form Container */}
             <div className="relative">

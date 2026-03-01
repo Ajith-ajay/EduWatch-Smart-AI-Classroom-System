@@ -5,10 +5,12 @@ import { extname } from 'path';
 import { TeachersService } from './teachers.service';
 import { TeachersController } from './teachers.controller';
 import { PrismaModule } from '../../prisma/prisma.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     PrismaModule,
+    AuthModule,
     MulterModule.register({
       storage: diskStorage({
         destination: './uploads/staff',

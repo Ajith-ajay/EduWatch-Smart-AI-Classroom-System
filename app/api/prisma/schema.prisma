@@ -8,16 +8,32 @@ datasource db {
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
-  full_name   String
-  email       String   @unique
-  password    String
-  role        String   @default("admin")
-  institution String
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  admin_code  String
+  id             Int            @id @default(autoincrement())
+  full_name      String
+  email          String         @unique
+  password       String
+  role           String         @default("admin")
+  institution    String
+  is_active      Boolean        @default(true)
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+  admin_code     String
+  refreshTokens  RefreshToken[]
+
+  @@index([email], map: "idx_user_email")
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "idx_refresh_token_user_id")
+  @@index([token], map: "idx_refresh_token_token")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -98,7 +114,27 @@ model teachers {
   timetable                                                                 timetable[]
 
   @@index([is_active], map: "idx_teacher_active")
-  @@index([email], map: "idx_teacher_email")
+}
+
+model AuditLog {
+  id            Int       @id @default(autoincrement())
+  userId        Int?
+  userEmail     String?
+  method        String    @db.VarChar(10)
+  endpoint      String    @db.VarChar(500)
+  statusCode    Int
+  requestBody   String?   @db.Text
+  responseBody  String?   @db.Text
+  ipAddress     String?   @db.VarChar(50)
+  userAgent     String?   @db.Text
+  errorMessage  String?   @db.Text
+  executionTime Int       @default(0)
+  createdAt     DateTime  @default(now())
+
+  @@index([userId], map: "idx_audit_user_id")
+  @@index([createdAt], map: "idx_audit_created_at")
+  @@index([endpoint], map: "idx_audit_endpoint")
+  @@index([userEmail], map: "idx_teacher_email")
 }
 
 model timetable {

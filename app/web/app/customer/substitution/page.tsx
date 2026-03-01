@@ -162,7 +162,7 @@ export default function TeacherSubstitutionPage() {
               Dashboard
             </Link>
             <Link
-              href="/login"
+              href="/logout"
               className="px-4 py-2 border border-zinc-300 text-zinc-900 rounded-lg text-sm font-medium hover:border-zinc-900 transition"
             >
               Logout
