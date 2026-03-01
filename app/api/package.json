@@ -17,7 +17,19 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push --skip-generate && npm run db:apply-custom-sql",
+    "db:migrate": "prisma migrate dev && npm run db:apply-custom-sql",
+    "db:migrate:deploy": "prisma migrate deploy && npm run db:apply-custom-sql",
+    "db:apply-custom-sql": "node scripts/apply-custom-sql.js",
+    "db:seed": "node scripts/apply-seeds.js",
+    "db:full-setup": "node scripts/db-full-setup.js",
+    "db:full-setup:seed": "node scripts/db-full-setup.js --seed",
+    "db:introspect": "node scripts/introspect-and-preserve.js",
+    "db:studio": "prisma studio",
+    "db:reset": "node scripts/reset-database.js",
+    "db:reset:table": "node scripts/reset-table.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

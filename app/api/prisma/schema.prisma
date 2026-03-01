@@ -1,3 +1,12 @@
+// ⚠️ IMPORTANT: This schema only defines TABLES managed by Prisma
+// Custom database objects (views, functions) are managed separately in database/ folder
+// 
+// When making schema changes:
+// ✅ DO: Use `npm run db:push` or `npm run db:migrate` 
+// ❌ DON'T: Use raw Prisma commands (they won't apply custom SQL)
+//
+// See DATABASE_MANAGEMENT_GUIDE.md for complete documentation
+
 generator client {
   provider = "prisma-client-js"
 }
