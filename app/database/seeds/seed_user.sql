@@ -4,7 +4,7 @@ VALUES
 (
   'AJith G',
   'ajithajay1029@gmail.com',
-  'your_hashed_password_here',
+  '$2a$10$cVhO0AKZCFz8FGsfOnNDn.FBWtYxnt9ot.osIweNjLxxabu9dio0.',
   'admin',
   'AI&DS',
   'Velammal Engineering College',

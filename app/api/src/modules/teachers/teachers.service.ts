@@ -20,7 +20,12 @@ export class TeachersService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreateTeacherDto, imagePath?: string) {
+  async create(data: CreateTeacherDto, imagePath?: string, adminDepartment?: string) {
+
+    if(data.department !== adminDepartment) {
+      throw new NotFoundException('Adding Teacher Only for your Department');
+    }
+
     return this.prisma.teachers.create({
         data: {
         ...data,
@@ -29,19 +34,24 @@ export class TeachersService {
     });
   }
 
-  async findAll() {
+  async findAll(adminDepartment?: string) {
     return this.prisma.teachers.findMany({
+      where: adminDepartment ? { department: adminDepartment } : undefined,
       orderBy: { created_at: 'desc' },
       select: this.teacherSelect,
     });
   }
 
-  async update(id: number, data: UpdateTeacherDto, imagePath?: string) {
+  async update(id: number, data: UpdateTeacherDto, imagePath?: string, adminDepartment?: string) {
     const teacher = await this.prisma.teachers.findUnique({
       where: { teacher_id: id },
     });
 
     if (!teacher) throw new NotFoundException('Teacher not found');
+
+    if(teacher.department !== adminDepartment) {
+      throw new NotFoundException('Teacher Update Only for your Department');
+    }
 
     const updateData = {
       ...data,
@@ -54,7 +64,7 @@ export class TeachersService {
     });
   }
 
-  async delete(id: number) {
+  async delete(id: number, adminDepartment?: string) {
     return this.prisma.$transaction(async (tx) => {
 
       const teacher = await tx.teachers.findUnique({
@@ -63,6 +73,10 @@ export class TeachersService {
 
       if (!teacher) {
         throw new NotFoundException('Teacher not found');
+      }
+
+      if(teacher.department !== adminDepartment) {
+        throw new NotFoundException('Teacher Delete Only for your Department');
       }
 
       // 1️⃣ Archive image first (outside DB safety but fine)

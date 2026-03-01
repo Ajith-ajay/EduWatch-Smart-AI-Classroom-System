@@ -32,14 +32,16 @@ export class TeachersController {
     @Req() req: any,
   ) {
     const imagePath = file ? `/uploads/staff/${file.filename}` : undefined;
-    return this.teachersService.create(dto, imagePath);
+    const adminDepartment = req.user?.admin_code;
+    return this.teachersService.create(dto, imagePath, adminDepartment);
   }
 
   // LIST ALL TEACHERS (Protected)
   @Get()
   @UseGuards(JwtAuthGuard)
-  async findAll() {
-    return this.teachersService.findAll();
+  async findAll(@Req() req: any) {
+    const adminDepartment = req.user?.admin_code;
+    return this.teachersService.findAll(adminDepartment);
   }
 
   // UPDATE TEACHER (Protected)
@@ -53,7 +55,8 @@ export class TeachersController {
     @Req() req?: any,
   ) {
     const imagePath = file ? `/uploads/staff/${file.filename}` : undefined;
-    return this.teachersService.update(id, dto, imagePath);
+    const adminDepartment = req.user?.admin_code;
+    return this.teachersService.update(id, dto, imagePath, adminDepartment);
   }
 
   // DELETE TEACHER (Protected)
@@ -63,6 +66,7 @@ export class TeachersController {
     @Param('id', ParseIntPipe) id: number,
     @Req() req?: any,
   ) {
-    return this.teachersService.delete(id);
+    const adminDepartment = req.user?.admin_code;
+    return this.teachersService.delete(id, adminDepartment);
   }
 }

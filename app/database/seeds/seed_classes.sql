@@ -1,4 +1,22 @@
 INSERT INTO classes (class_name, department, semester, section)
 VALUES
+('CSE-I', 'CSE', 2, 'A'),
+('CSE-I', 'CSE', 2, 'B'),
+('CSE-I', 'CSE', 2, 'C'),
+('CSE-IV', 'CSE', 8, 'B'),
 ('CSE-III', 'CSE', 6, 'A'),
-('CSE-II', 'CSE', 4, 'B');
+('CSE-II', 'CSE', 4, 'A'),
+('CSE-II', 'CSE', 4, 'B'),
+('CSE-II', 'CSE', 4, 'C'),
+('AI&DS-II', 'AI&DS', 4, 'A'),
+('AI&DS-II', 'AI&DS', 4, 'B'),
+('AI&DS-II', 'AI&DS', 4, 'C'),
+('AI&DS-II', 'AI&DS', 4, 'D'),
+('AI&DS-I', 'AI&DS', 2, 'A'),
+('AI&DS-I', 'AI&DS', 2, 'B'),
+('AI&DS-I', 'AI&DS', 2, 'C'),
+('AI&DS-I', 'AI&DS', 2, 'D'),
+('AI&DS-III', 'AI&DS', 6, 'A'),
+('AI&DS-III', 'AI&DS', 6, 'B'),
+('AI&DS-III', 'AI&DS', 6, 'C'),
+('AI&DS-III', 'AI&DS', 6, 'D');

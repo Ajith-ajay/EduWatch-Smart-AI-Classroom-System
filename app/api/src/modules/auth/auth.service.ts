@@ -130,6 +130,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      admin_code: user.admin_code,
     };
 
     // Generate access token (15 minutes)

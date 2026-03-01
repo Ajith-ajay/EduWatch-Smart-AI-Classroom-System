@@ -1,133 +1,255 @@
 'use client';
 
+import api from '@/lib/api';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+type TimetableEntry = {
+  timetable_id: number;
+  class_id: number;
+  subject_id: number;
+  teacher_id: number;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  class_name?: string;
+  subject_name?: string;
+  subject_code?: string;
+  teacher_name?: string;
+};
+
+type TimetableMeta = {
+  classes: {
+    class_id: number;
+    class_name: string;
+    department?: string;
+    semester?: number;
+    section?: string;
+  }[];
+  subjects: {
+    subject_id: number;
+    subject_name: string;
+    subject_code: string;
+    department?: string;
+  }[];
+  teachers: {
+    teacher_id: number;
+    full_name: string;
+    department?: string;
+  }[];
+};
+
+type FormState = {
+  class_id: string;
+  subject_id: string;
+  teacher_id: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+};
+
+const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+const emptyForm: FormState = {
+  class_id: '',
+  subject_id: '',
+  teacher_id: '',
+  day_of_week: 'Monday',
+  start_time: '09:00',
+  end_time: '10:30',
+};
 
 export default function TimetablePage() {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedClass, setSelectedClass] = useState('A-101');
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [meta, setMeta] = useState<TimetableMeta>({ classes: [], subjects: [], teachers: [] });
+  const [entries, setEntries] = useState<TimetableEntry[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [selectedDay, setSelectedDay] = useState<string>('all');
+  const [searchText, setSearchText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
-  const [editingPeriod, setEditingPeriod] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
+  const [form, setForm] = useState<FormState>(emptyForm);
   const [excelFile, setExcelFile] = useState<File | null>(null);
 
-  const classes = ['A-101', 'A-102', 'B-204', 'B-205', 'C-305'];
-  const teachers = [
-    'Dr. Rajesh Kumar',
-    'Prof. Priya Sharma',
-    'Dr. Amit Patel',
-    'Prof. Neha Singh',
-  ];
-  const subjects = ['Data Structures', 'Web Development', 'Database Design', 'Software Engineering'];
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const refreshMeta = async () => {
+    const response = await api.get('/timetable/meta');
+    setMeta(response.data);
 
-  const [newPeriod, setNewPeriod] = useState({
-    class: selectedClass,
-    subject: '',
-    teacher: '',
-    day: 'Monday',
-    startTime: '09:00',
-    endTime: '10:30',
-  });
-
-  // Sample timetable data
-  const [timetableData, setTimetableData] = useState([
-    {
-      id: 'T001',
-      class: 'A-101',
-      subject: 'Data Structures',
-      teacher: 'Dr. Rajesh Kumar',
-      day: 'Monday',
-      startTime: '09:00',
-      endTime: '10:30',
-    },
-    {
-      id: 'T002',
-      class: 'A-101',
-      subject: 'Web Development',
-      teacher: 'Prof. Priya Sharma',
-      day: 'Monday',
-      startTime: '10:45',
-      endTime: '12:15',
-    },
-    {
-      id: 'T003',
-      class: 'A-101',
-      subject: 'Database Design',
-      teacher: 'Dr. Amit Patel',
-      day: 'Tuesday',
-      startTime: '09:00',
-      endTime: '10:30',
-    },
-    {
-      id: 'T004',
-      class: 'A-101',
-      subject: 'Software Engineering',
-      teacher: 'Prof. Neha Singh',
-      day: 'Wednesday',
-      startTime: '09:00',
-      endTime: '10:30',
-    },
-    {
-      id: 'T005',
-      class: 'A-101',
-      subject: 'Data Structures',
-      teacher: 'Dr. Rajesh Kumar',
-      day: 'Thursday',
-      startTime: '10:45',
-      endTime: '12:15',
-    },
-    {
-      id: 'T006',
-      class: 'A-101',
-      subject: 'Web Development',
-      teacher: 'Prof. Priya Sharma',
-      day: 'Friday',
-      startTime: '09:00',
-      endTime: '10:30',
-    },
-  ]);
-
-  const classSchedules = timetableData.filter((t) => t.class === selectedClass);
-
-  const handleAddPeriod = () => {
-    if (newPeriod.subject && newPeriod.teacher) {
-      const period = {
-        id: `T${timetableData.length + 1}`.padStart(4, '0'),
-        ...newPeriod,
-        class: selectedClass,
-      };
-      setTimetableData([...timetableData, period]);
-      setNewPeriod({
-        class: selectedClass,
-        subject: '',
-        teacher: '',
-        day: 'Monday',
-        startTime: '09:00',
-        endTime: '10:30',
-      });
-      setShowAddModal(false);
+    if (response.data?.classes?.length && !selectedClassId) {
+      setSelectedClassId(String(response.data.classes[0].class_id));
     }
   };
 
-  const handleDeletePeriod = (id: string) => {
-    if (confirm('Are you sure you want to delete this period?')) {
-      setTimetableData(timetableData.filter((t) => t.id !== id));
+  const refreshEntries = async (classId: string, day: string) => {
+    const params = new URLSearchParams();
+
+    if (classId) {
+      params.set('class_id', classId);
+    }
+
+    if (day !== 'all') {
+      params.set('day', day);
+    }
+
+    const query = params.toString();
+    const response = await api.get(`/timetable${query ? `?${query}` : ''}`);
+    setEntries(response.data);
+  };
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      await refreshMeta();
+    } catch (error) {
+      console.error('Failed to load timetable metadata', error);
+      alert('Failed to load timetable metadata');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (!meta.classes.length || !selectedClassId) {
+      return;
+    }
+
+    refreshEntries(selectedClassId, selectedDay).catch((error) => {
+      console.error('Failed to load timetable entries', error);
+      alert('Failed to load timetable entries');
+    });
+  }, [selectedClassId, selectedDay, meta.classes]);
+
+  const filteredEntries = useMemo(() => {
+    const keyword = searchText.trim().toLowerCase();
+
+    if (!keyword) {
+      return entries;
+    }
+
+    return entries.filter((entry) => {
+      return (
+        entry.class_name?.toLowerCase().includes(keyword) ||
+        entry.subject_name?.toLowerCase().includes(keyword) ||
+        entry.subject_code?.toLowerCase().includes(keyword) ||
+        entry.teacher_name?.toLowerCase().includes(keyword) ||
+        entry.day_of_week.toLowerCase().includes(keyword)
+      );
+    });
+  }, [entries, searchText]);
+
+  const classSchedules = useMemo(() => {
+    return entries.filter((entry) => String(entry.class_id) === selectedClassId);
+  }, [entries, selectedClassId]);
+
+  const openCreateModal = () => {
+    setEditingEntry(null);
+    setForm({ ...emptyForm, class_id: selectedClassId });
+    setShowModal(true);
+  };
+
+  const openEditModal = (entry: TimetableEntry) => {
+    setEditingEntry(entry);
+    setForm({
+      class_id: String(entry.class_id),
+      subject_id: String(entry.subject_id),
+      teacher_id: String(entry.teacher_id),
+      day_of_week: entry.day_of_week,
+      start_time: entry.start_time,
+      end_time: entry.end_time,
+    });
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingEntry(null);
+    setForm(emptyForm);
+  };
+
+  const handleSubmit = async () => {
+    if (!form.class_id || !form.subject_id || !form.teacher_id || !form.day_of_week) {
+      alert('Please fill all required fields');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        class_id: Number(form.class_id),
+        subject_id: Number(form.subject_id),
+        teacher_id: Number(form.teacher_id),
+        day_of_week: form.day_of_week,
+        start_time: form.start_time,
+        end_time: form.end_time,
+      };
+
+      if (editingEntry) {
+        await api.put(`/timetable/${editingEntry.timetable_id}`, payload);
+      } else {
+        await api.post('/timetable', payload);
+      }
+
+      await refreshEntries(selectedClassId, selectedDay);
+      closeModal();
+      alert(editingEntry ? 'Timetable entry updated' : 'Timetable entry created');
+    } catch (error: any) {
+      console.error('Failed to save timetable entry', error);
+      alert(error?.response?.data?.message || 'Failed to save timetable entry');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (entryId: number) => {
+    if (!window.confirm('Are you sure you want to delete this period?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/timetable/${entryId}`);
+      await refreshEntries(selectedClassId, selectedDay);
+      alert('Timetable entry deleted');
+    } catch (error: any) {
+      console.error('Failed to delete timetable entry', error);
+      alert(error?.response?.data?.message || 'Failed to delete timetable entry');
     }
   };
 
   const handleBulkUpload = () => {
     if (excelFile) {
-      alert(`Timetable file "${excelFile.name}" uploaded successfully! (Mock operation)`);
+      alert(`Timetable file "${excelFile.name}" uploaded successfully! (Feature coming soon)`);
       setExcelFile(null);
       setShowBulkModal(false);
     }
   };
 
-  const getGridPosition = (day: string, startTime: string) => {
-    const dayIndex = daysOfWeek.indexOf(day);
-    const hour = parseInt(startTime.split(':')[0]);
-    return { dayIndex, hour };
+  const selectedClassName = useMemo(() => {
+    const cls = meta.classes.find((c) => String(c.class_id) === selectedClassId);
+    return cls?.class_name || '';
+  }, [meta.classes, selectedClassId]);
+
+  const selectedSubjectName = useMemo(() => {
+    const subj = meta.subjects.find((s) => String(s.subject_id) === form.subject_id);
+    return subj?.subject_name || 'Subject';
+  }, [meta.subjects, form.subject_id]);
+
+  const selectedTeacherName = useMemo(() => {
+    const tchr = meta.teachers.find((t) => String(t.teacher_id) === form.teacher_id);
+    return tchr?.full_name || 'Teacher';
+  }, [meta.teachers, form.teacher_id]);
+
+  const calculateDuration = (start: string, end: string) => {
+    if (!start || !end) return 0;
+    const [startHour, startMin] = start.split(':').map(Number);
+    const [endHour, endMin] = end.split(':').map(Number);
+    return ((endHour - startHour) * 60 + (endMin - startMin)) / 60;
   };
 
   return (
@@ -164,8 +286,9 @@ export default function TimetablePage() {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowAddModal(true)}
-                className="px-6 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800 transition"
+                onClick={openCreateModal}
+                disabled={!selectedClassId}
+                className="px-6 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800 transition disabled:opacity-50"
               >
                 + Add Period
               </button>
@@ -182,20 +305,24 @@ export default function TimetablePage() {
           <div className="flex items-center justify-between mb-8 pb-6 border-b border-zinc-200">
             <div className="flex items-center gap-4">
               <p className="text-sm font-semibold text-zinc-600">Class:</p>
-              <div className="flex gap-2">
-                {classes.map((cls) => (
-                  <button
-                    key={cls}
-                    onClick={() => setSelectedClass(cls)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                      selectedClass === cls
-                        ? 'bg-zinc-900 text-white'
-                        : 'bg-zinc-100 text-zinc-900 hover:bg-zinc-200'
-                    }`}
-                  >
-                    {cls}
-                  </button>
-                ))}
+              <div className="flex gap-2 flex-wrap">
+                {loading ? (
+                  <p className="text-sm text-zinc-500">Loading classes...</p>
+                ) : (
+                  meta.classes.map((cls) => (
+                    <button
+                      key={cls.class_id}
+                      onClick={() => setSelectedClassId(String(cls.class_id))}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                        selectedClassId === String(cls.class_id)
+                          ? 'bg-zinc-900 text-white'
+                          : 'bg-zinc-100 text-zinc-900 hover:bg-zinc-200'
+                      }`}
+                    >
+                      {cls.class_name} - {cls.section}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 
@@ -220,189 +347,185 @@ export default function TimetablePage() {
             </div>
           </div>
 
-          {/* Grid View */}
-          {viewMode === 'grid' && (
-            <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden mb-8">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-zinc-900 text-white">
-                      <th className="px-4 py-3 text-left text-sm font-semibold w-20">Time</th>
-                      {daysOfWeek.map((day) => (
-                        <th key={day} className="px-4 py-3 text-left text-sm font-semibold">
-                          {day}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[9, 10, 11, 12, 13, 14, 15, 16].map((hour) => (
-                      <tr key={hour} className="border-t border-zinc-200 hover:bg-zinc-50">
-                        <td className="px-4 py-3 text-sm font-semibold text-zinc-900">
-                          {hour}:00 - {hour + 1}:30
-                        </td>
-                        {daysOfWeek.map((day) => {
-                          const period = classSchedules.find(
-                            (t) => t.day === day && parseInt(t.startTime.split(':')[0]) === hour
-                          );
-                          return (
-                            <td key={`${day}-${hour}`} className="px-4 py-3">
-                              {period ? (
-                                <div
-                                  className="bg-zinc-900 text-white p-3 rounded-lg cursor-pointer group hover:bg-zinc-800 transition"
-                                  onClick={() => setEditingPeriod(period.id)}
-                                >
-                                  <p className="font-semibold text-xs mb-1">{period.subject}</p>
-                                  <p className="text-xs text-zinc-300">{period.teacher}</p>
-                                  <p className="text-xs text-zinc-400 mt-1">
-                                    {period.startTime} - {period.endTime}
-                                  </p>
-                                  <div className="mt-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeletePeriod(period.id);
-                                      }}
-                                      className="flex-1 text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="h-20 bg-zinc-50 rounded border-2 border-dashed border-zinc-300 flex items-center justify-center text-zinc-400 text-xs hover:border-zinc-900 transition cursor-pointer group">
-                                  <span className="opacity-0 group-hover:opacity-100">Add</span>
-                                </div>
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          {loading ? (
+            <div className="text-center py-12 bg-white border border-zinc-200 rounded-lg">
+              <p className="text-zinc-600">Loading timetable...</p>
             </div>
-          )}
-
-          {/* List View */}
-          {viewMode === 'list' && (
-            <div className="space-y-4 mb-8">
-              {classSchedules.length > 0 ? (
-                classSchedules.map((period) => (
-                  <div
-                    key={period.id}
-                    className="bg-white border border-zinc-200 rounded-lg p-6 hover:border-zinc-900 transition"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 items-center">
-                      {/* Day & Time */}
-                      <div>
-                        <p className="text-zinc-600 text-xs uppercase mb-1">Day & Time</p>
-                        <p className="font-semibold text-zinc-900">{period.day}</p>
-                        <p className="text-sm text-zinc-600">
-                          {period.startTime} - {period.endTime}
-                        </p>
-                      </div>
-
-                      {/* Subject */}
-                      <div>
-                        <p className="text-zinc-600 text-xs uppercase mb-1">Subject</p>
-                        <p className="font-semibold text-zinc-900">{period.subject}</p>
-                      </div>
-
-                      {/* Teacher */}
-                      <div>
-                        <p className="text-zinc-600 text-xs uppercase mb-1">Teacher</p>
-                        <p className="font-semibold text-zinc-900">{period.teacher}</p>
-                      </div>
-
-                      {/* Class */}
-                      <div>
-                        <p className="text-zinc-600 text-xs uppercase mb-1">Class</p>
-                        <p className="font-semibold text-zinc-900">{period.class}</p>
-                      </div>
-
-                      {/* Duration */}
-                      <div>
-                        <p className="text-zinc-600 text-xs uppercase mb-1">Duration</p>
-                        <p className="font-semibold text-zinc-900">1.5 hrs</p>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={() => {
-                            setNewPeriod({
-                              class: period.class,
-                              subject: period.subject,
-                              teacher: period.teacher,
-                              day: period.day,
-                              startTime: period.startTime,
-                              endTime: period.endTime,
-                            });
-                            setEditingPeriod(period.id);
-                            setShowAddModal(true);
-                          }}
-                          className="px-3 py-2 border border-zinc-300 text-zinc-900 rounded-lg text-sm font-medium hover:border-zinc-900 transition"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeletePeriod(period.id)}
-                          className="px-3 py-2 bg-red-100 text-red-900 rounded-lg text-sm font-medium hover:bg-red-200 transition"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
+          ) : (
+            <>
+              {/* Grid View */}
+              {viewMode === 'grid' && (
+                <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden mb-8">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-zinc-900 text-white">
+                          <th className="px-4 py-3 text-left text-sm font-semibold w-20">Time</th>
+                          {days.map((day) => (
+                            <th key={day} className="px-4 py-3 text-left text-sm font-semibold">
+                              {day}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[9, 10, 11, 12, 13, 14, 15, 16].map((hour) => (
+                          <tr key={hour} className="border-t border-zinc-200 hover:bg-zinc-50">
+                            <td className="px-4 py-3 text-sm font-semibold text-zinc-900">
+                              {hour}:00 - {hour + 1}:30
+                            </td>
+                            {days.map((day) => {
+                              const period = classSchedules.find(
+                                (t) => t.day_of_week === day && parseInt(t.start_time.split(':')[0]) === hour
+                              );
+                              return (
+                                <td key={`${day}-${hour}`} className="px-4 py-3">
+                                  {period ? (
+                                    <div
+                                      className="bg-zinc-900 text-white p-3 rounded-lg cursor-pointer group hover:bg-zinc-800 transition"
+                                      onClick={() => openEditModal(period)}
+                                    >
+                                      <p className="font-semibold text-xs mb-1">{period.subject_name}</p>
+                                      <p className="text-xs text-zinc-300">{period.teacher_name}</p>
+                                      <p className="text-xs text-zinc-400 mt-1">
+                                        {period.start_time} - {period.end_time}
+                                      </p>
+                                      <div className="mt-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(period.timetable_id);
+                                          }}
+                                          className="flex-1 text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded"
+                                        >
+                                          Delete
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="h-20 bg-zinc-50 rounded border-2 border-dashed border-zinc-300 flex items-center justify-center text-zinc-400 text-xs hover:border-zinc-900 transition cursor-pointer group">
+                                      <span className="opacity-0 group-hover:opacity-100">Add</span>
+                                    </div>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-12 bg-white border border-zinc-200 rounded-lg">
-                  <p className="text-zinc-600">No periods added for this class yet</p>
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white border border-zinc-200 rounded-lg p-6">
-              <p className="text-zinc-600 text-sm mb-2">Total Periods</p>
-              <p className="text-3xl font-bold text-zinc-900">{timetableData.length}</p>
-            </div>
-            <div className="bg-white border border-zinc-200 rounded-lg p-6">
-              <p className="text-zinc-600 text-sm mb-2">Class Periods</p>
-              <p className="text-3xl font-bold text-zinc-900">{classSchedules.length}</p>
-            </div>
-            <div className="bg-white border border-zinc-200 rounded-lg p-6">
-              <p className="text-zinc-600 text-sm mb-2">Unique Teachers</p>
-              <p className="text-3xl font-bold text-zinc-900">
-                {new Set(classSchedules.map((t) => t.teacher)).size}
-              </p>
-            </div>
-            <div className="bg-white border border-zinc-200 rounded-lg p-6">
-              <p className="text-zinc-600 text-sm mb-2">Unique Subjects</p>
-              <p className="text-3xl font-bold text-zinc-900">
-                {new Set(classSchedules.map((t) => t.subject)).size}
-              </p>
-            </div>
-          </div>
+              {/* List View */}
+              {viewMode === 'list' && (
+                <div className="space-y-4 mb-8">
+                  {classSchedules.length > 0 ? (
+                    classSchedules.map((period) => (
+                      <div
+                        key={period.timetable_id}
+                        className="bg-white border border-zinc-200 rounded-lg p-6 hover:border-zinc-900 transition"
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 items-center">
+                          {/* Day & Time */}
+                          <div>
+                            <p className="text-zinc-600 text-xs uppercase mb-1">Day & Time</p>
+                            <p className="font-semibold text-zinc-900">{period.day_of_week}</p>
+                            <p className="text-sm text-zinc-600">
+                              {period.start_time} - {period.end_time}
+                            </p>
+                          </div>
+
+                          {/* Subject */}
+                          <div>
+                            <p className="text-zinc-600 text-xs uppercase mb-1">Subject</p>
+                            <p className="font-semibold text-zinc-900">{period.subject_name}</p>
+                          </div>
+
+                          {/* Teacher */}
+                          <div>
+                            <p className="text-zinc-600 text-xs uppercase mb-1">Teacher</p>
+                            <p className="font-semibold text-zinc-900">{period.teacher_name}</p>
+                          </div>
+
+                          {/* Class */}
+                          <div>
+                            <p className="text-zinc-600 text-xs uppercase mb-1">Class</p>
+                            <p className="font-semibold text-zinc-900">{period.class_name}</p>
+                          </div>
+
+                          {/* Duration */}
+                          <div>
+                            <p className="text-zinc-600 text-xs uppercase mb-1">Duration</p>
+                            <p className="font-semibold text-zinc-900">
+                              {calculateDuration(period.start_time, period.end_time).toFixed(1)} hrs
+                            </p>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => openEditModal(period)}
+                              className="px-3 py-2 border border-zinc-300 text-zinc-900 rounded-lg text-sm font-medium hover:border-zinc-900 transition"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(period.timetable_id)}
+                              className="px-3 py-2 bg-red-100 text-red-900 rounded-lg text-sm font-medium hover:bg-red-200 transition"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 bg-white border border-zinc-200 rounded-lg">
+                      <p className="text-zinc-600">No periods added for this class yet</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="bg-white border border-zinc-200 rounded-lg p-6">
+                  <p className="text-zinc-600 text-sm mb-2">Total Periods</p>
+                  <p className="text-3xl font-bold text-zinc-900">{entries.length}</p>
+                </div>
+                <div className="bg-white border border-zinc-200 rounded-lg p-6">
+                  <p className="text-zinc-600 text-sm mb-2">Class Periods</p>
+                  <p className="text-3xl font-bold text-zinc-900">{classSchedules.length}</p>
+                </div>
+                <div className="bg-white border border-zinc-200 rounded-lg p-6">
+                  <p className="text-zinc-600 text-sm mb-2">Unique Teachers</p>
+                  <p className="text-3xl font-bold text-zinc-900">
+                    {new Set(classSchedules.map((t) => t.teacher_name)).size}
+                  </p>
+                </div>
+                <div className="bg-white border border-zinc-200 rounded-lg p-6">
+                  <p className="text-zinc-600 text-sm mb-2">Unique Subjects</p>
+                  <p className="text-3xl font-bold text-zinc-900">
+                    {new Set(classSchedules.map((t) => t.subject_name)).size}
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* Add/Edit Period Modal */}
-      {showAddModal && (
+      {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-zinc-200">
-              <h2 className="text-2xl font-bold">{editingPeriod ? 'Edit Period' : 'Add New Period'}</h2>
+              <h2 className="text-2xl font-bold">{editingEntry ? 'Edit Period' : 'Add New Period'}</h2>
               <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setEditingPeriod(null);
-                }}
+                onClick={closeModal}
                 className="text-xl text-zinc-600 hover:text-zinc-900"
               >
                 ✕
@@ -419,14 +542,15 @@ export default function TimetablePage() {
                       Class *
                     </label>
                     <select
-                      value={selectedClass}
-                      onChange={(e) => setSelectedClass(e.target.value)}
-                      disabled={editingPeriod !== null}
+                      value={form.class_id}
+                      onChange={(e) => setForm({ ...form, class_id: e.target.value })}
+                      disabled={editingEntry !== null}
                       className="w-full px-4 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-zinc-900 disabled:bg-zinc-100"
                     >
-                      {classes.map((cls) => (
-                        <option key={cls} value={cls}>
-                          {cls}
+                      <option value="">Select Class</option>
+                      {meta.classes.map((cls) => (
+                        <option key={cls.class_id} value={cls.class_id}>
+                          {cls.class_name}
                         </option>
                       ))}
                     </select>
@@ -437,11 +561,11 @@ export default function TimetablePage() {
                       Day *
                     </label>
                     <select
-                      value={newPeriod.day}
-                      onChange={(e) => setNewPeriod({ ...newPeriod, day: e.target.value })}
+                      value={form.day_of_week}
+                      onChange={(e) => setForm({ ...form, day_of_week: e.target.value })}
                       className="w-full px-4 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-zinc-900"
                     >
-                      {daysOfWeek.map((day) => (
+                      {days.map((day) => (
                         <option key={day} value={day}>
                           {day}
                         </option>
@@ -456,8 +580,8 @@ export default function TimetablePage() {
                       </label>
                       <input
                         type="time"
-                        value={newPeriod.startTime}
-                        onChange={(e) => setNewPeriod({ ...newPeriod, startTime: e.target.value })}
+                        value={form.start_time}
+                        onChange={(e) => setForm({ ...form, start_time: e.target.value })}
                         className="w-full px-4 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-zinc-900"
                       />
                     </div>
@@ -467,8 +591,8 @@ export default function TimetablePage() {
                       </label>
                       <input
                         type="time"
-                        value={newPeriod.endTime}
-                        onChange={(e) => setNewPeriod({ ...newPeriod, endTime: e.target.value })}
+                        value={form.end_time}
+                        onChange={(e) => setForm({ ...form, end_time: e.target.value })}
                         className="w-full px-4 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-zinc-900"
                       />
                     </div>
@@ -479,14 +603,14 @@ export default function TimetablePage() {
                       Subject *
                     </label>
                     <select
-                      value={newPeriod.subject}
-                      onChange={(e) => setNewPeriod({ ...newPeriod, subject: e.target.value })}
+                      value={form.subject_id}
+                      onChange={(e) => setForm({ ...form, subject_id: e.target.value })}
                       className="w-full px-4 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-zinc-900"
                     >
                       <option value="">Select Subject</option>
-                      {subjects.map((subject) => (
-                        <option key={subject} value={subject}>
-                          {subject}
+                      {meta.subjects.map((subject) => (
+                        <option key={subject.subject_id} value={subject.subject_id}>
+                          {subject.subject_name}
                         </option>
                       ))}
                     </select>
@@ -497,14 +621,14 @@ export default function TimetablePage() {
                       Teacher *
                     </label>
                     <select
-                      value={newPeriod.teacher}
-                      onChange={(e) => setNewPeriod({ ...newPeriod, teacher: e.target.value })}
+                      value={form.teacher_id}
+                      onChange={(e) => setForm({ ...form, teacher_id: e.target.value })}
                       className="w-full px-4 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:border-zinc-900"
                     >
                       <option value="">Select Teacher</option>
-                      {teachers.map((teacher) => (
-                        <option key={teacher} value={teacher}>
-                          {teacher}
+                      {meta.teachers.map((teacher) => (
+                        <option key={teacher.teacher_id} value={teacher.teacher_id}>
+                          {teacher.full_name}
                         </option>
                       ))}
                     </select>
@@ -516,14 +640,14 @@ export default function TimetablePage() {
                   <p className="text-sm font-semibold text-zinc-600 uppercase mb-4">Period Preview</p>
                   <div className="bg-zinc-900 text-white p-4 rounded-lg">
                     <p className="text-xs text-zinc-400 mb-2">
-                      {newPeriod.day} • {newPeriod.startTime} - {newPeriod.endTime}
+                      {form.day_of_week} • {form.start_time} - {form.end_time}
                     </p>
-                    <h4 className="font-bold text-lg mb-2">{newPeriod.subject || 'Subject'}</h4>
-                    <p className="text-sm text-zinc-300 mb-1">{newPeriod.teacher || 'Teacher'}</p>
-                    <p className="text-xs text-zinc-400">{newPeriod.class || 'Class'}</p>
+                    <h4 className="font-bold text-lg mb-2">{selectedSubjectName}</h4>
+                    <p className="text-sm text-zinc-300 mb-1">{selectedTeacherName}</p>
+                    <p className="text-xs text-zinc-400">{selectedClassName}</p>
                     <div className="mt-4 pt-4 border-t border-zinc-700">
                       <p className="text-xs text-zinc-400">
-                        Duration: {((parseInt(newPeriod.endTime.split(':')[0]) - parseInt(newPeriod.startTime.split(':')[0])) * 60 + (parseInt(newPeriod.endTime.split(':')[1]) - parseInt(newPeriod.startTime.split(':')[1]))) / 60} hours
+                        Duration: {calculateDuration(form.start_time, form.end_time).toFixed(1)} hours
                       </p>
                     </div>
                   </div>
@@ -534,19 +658,17 @@ export default function TimetablePage() {
             {/* Modal Footer */}
             <div className="flex gap-3 p-6 border-t border-zinc-200">
               <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setEditingPeriod(null);
-                }}
+                onClick={closeModal}
                 className="flex-1 px-4 py-2 border border-zinc-300 text-zinc-900 rounded-lg font-medium hover:border-zinc-900 transition"
               >
                 Cancel
               </button>
               <button
-                onClick={handleAddPeriod}
-                className="flex-1 px-4 py-2 bg-zinc-900 text-white rounded-lg font-medium hover:bg-zinc-800 transition"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="flex-1 px-4 py-2 bg-zinc-900 text-white rounded-lg font-medium hover:bg-zinc-800 transition disabled:opacity-50"
               >
-                {editingPeriod ? 'Update Period' : 'Add Period'}
+                {submitting ? 'Saving...' : editingEntry ? 'Update Period' : 'Add Period'}
               </button>
             </div>
           </div>
