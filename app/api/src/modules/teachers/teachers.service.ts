@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { promises as fs } from 'fs';
-import { join } from 'path';
+import { join, extname } from 'path';
 
 @Injectable()
 export class TeachersService {
@@ -20,18 +20,65 @@ export class TeachersService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreateTeacherDto, imagePath?: string, adminDepartment?: string) {
+  async create(
+    data: CreateTeacherDto,
+    tempImagePath?: string,
+    adminDepartment?: string,
+  ) {
 
-    if(data.department !== adminDepartment) {
+    if (data.department !== adminDepartment) {
       throw new NotFoundException('Adding Teacher Only for your Department');
     }
 
-    return this.prisma.teachers.create({
+    let teacher;
+
+    try {
+      // 1️⃣ Create teacher first
+      teacher = await this.prisma.teachers.create({
         data: {
-        ...data,
-        staff_image_path: imagePath || 'pending',
+          ...data,
+          staff_image_path: 'pending',
         },
-    });
+      });
+    } catch (error) {
+
+      // If DB insert fails → delete temp file
+      if (tempImagePath) {
+        try { await fs.unlink(tempImagePath); } catch {}
+      }
+
+      throw error;
+    }
+
+    // 2️⃣ Handle image if exists
+    if (tempImagePath) {
+      const ext = extname(tempImagePath);
+      const newFilename = `${teacher.teacher_id}${ext}`;
+      const newPath = join(process.cwd(), 'uploads', 'staff', newFilename);
+
+      try {
+        await fs.rename(tempImagePath, newPath);
+
+        await this.prisma.teachers.update({
+          where: { teacher_id: teacher.teacher_id },
+          data: { staff_image_path: `/uploads/staff/${newFilename}` },
+        });
+
+      } catch (error) {
+
+        // If rename fails → remove teacher record
+        await this.prisma.teachers.delete({
+          where: { teacher_id: teacher.teacher_id },
+        });
+
+        // Cleanup temp file if still exists
+        try { await fs.unlink(tempImagePath); } catch {}
+
+        throw error;
+      }
+    }
+
+    return teacher;
   }
 
   async findAll(adminDepartment?: string) {

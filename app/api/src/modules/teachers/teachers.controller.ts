@@ -17,6 +17,7 @@ import { TeachersService } from './teachers.service';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { join } from 'path';
 
 @Controller('teachers')
 export class TeachersController {
@@ -31,7 +32,7 @@ export class TeachersController {
     @UploadedFile() file: Express.Multer.File,
     @Req() req: any,
   ) {
-    const imagePath = file ? `/uploads/staff/${file.filename}` : undefined;
+    const imagePath = file ? join(process.cwd(), 'uploads', 'staff', file.filename) : undefined;
     const adminDepartment = req.user?.admin_code;
     return this.teachersService.create(dto, imagePath, adminDepartment);
   }

@@ -9,7 +9,7 @@ from services.person_detector import detect_person
 from services.pose_detector import detect_gesture
 from services.voice_detector import VoiceDetector
 from services.decision_engine import decide
-from services.recognizer import TeacherRecognizer
+from services.recognizer import TeacherRecognizerArcFace, TeacherRecognizer
 from client.backend_client import send_attendance
 
 # Frame processing
@@ -74,6 +74,7 @@ def main():
     frame_count = 0
     last_api_call = 0
 
+    recognizerArcFace = TeacherRecognizerArcFace()
     recognizer = TeacherRecognizer()
     voice_detector = VoiceDetector()
 
