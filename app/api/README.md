@@ -1,301 +1,147 @@
+# EduWatch API Module (NestJS)
 
-## Project setup
+This module is the central backend service for EduWatch. It exposes REST APIs for authentication, teachers, classes, timetable management, substitution workflows, attendance logic support, and audit logs.
+
+## Tech Stack
+
+- NestJS 11
+- Prisma ORM (PostgreSQL)
+- Custom SQL for functions/views
+- JWT authentication
+- Request audit logging
+- Endpoint-level rate limiting
+
+## Runtime
+
+- Default server URL: `http://localhost:5000`
+- Static uploads path: `/uploads/*`
+
+## Folder Structure
+
+```text
+api/
+├── src/
+│   ├── modules/                  # Feature modules (auth, teachers, timetable, etc.)
+│   ├── common/                   # Guards, interceptors, shared services
+│   ├── prisma/                   # Prisma service wiring
+│   └── main.ts                   # Application bootstrap
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
+├── scripts/                      # Database helper scripts
+├── docs/                         # Detailed backend docs
+├── uploads/
+├── package.json
+└── .env.example
+```
+
+## Prerequisites
+
+- Node.js 20+
+- npm 10+
+- PostgreSQL 14+
+
+## Environment Configuration
+
+Create `.env` in `app/api` by copying `.env.example`.
+
+Required variables:
+
+```env
+DATABASE_URL="postgresql://postgres:password@localhost:5432/eduwatch"
+JWT_SECRET="your-secret-key"
+JWT_REFRESH_SECRET="your-refresh-secret-key"
+PORT=5000
+NODE_ENV=development
+```
+
+## Install and Run
+
+From repository root:
 
 ```bash
-$ npm install
+cd app/api
+npm install
 ```
 
-## Compile and run the project
+Database first-time setup:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run db:full-setup
 ```
 
-## Run tests
+Start API in development:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run start:dev
 ```
 
-## Database Management
-
-This project uses a hybrid database approach with **Prisma ORM** + **Custom SQL** (views, functions).
-
-### Quick Start
+Production mode:
 
 ```bash
-# First time setup
-$ npm run db:full-setup
-
-# After schema changes (development)
-$ npm run db:push
-
-# Production migrations
-$ npm run db:migrate:deploy
-
-# Re-apply views/functions only
-$ npm run db:apply-custom-sql
+npm run build
+npm run start:prod
 ```
 
-### Available Database Commands
+## Database Commands
 
-| Command | Description |
-|---------|-------------|
-| `npm run db:full-setup` | Complete database initialization |
-| `npm run db:push` | Push schema changes (dev) |
-| `npm run db:migrate` | Create and apply migration |
-| `npm run db:migrate:deploy` | Deploy migrations (production) |
-| `npm run db:apply-custom-sql` | Apply custom views/functions |
-| `npm run db:introspect` | Pull database schema to Prisma |
-| `npm run db:studio` | Open Prisma Studio (GUI) |
-| `npm run db:generate` | Generate Prisma Client |
-
-### 📖 Documentation
-
-- **[DATABASE_MANAGEMENT_GUIDE.md](./DATABASE_MANAGEMENT_GUIDE.md)** - Complete guide with workflows and best practices
-- **[DATABASE_QUICK_REFERENCE.md](./DATABASE_QUICK_REFERENCE.md)** - Quick command reference
-- **[scripts/README.md](./scripts/README.md)** - Script documentation
-
-### ⚠️ Important
-
-Always use the npm scripts above instead of raw Prisma commands. This ensures custom SQL objects (views, functions) are preserved after schema changes.
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Always use provided npm scripts so custom SQL is preserved.
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run db:generate
+npm run db:push
+npm run db:migrate
+npm run db:migrate:deploy
+npm run db:apply-custom-sql
+npm run db:seed
+npm run db:full-setup
+npm run db:full-setup:seed
+npm run db:introspect
+npm run db:studio
+npm run db:reset
+npm run db:reset:table
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-# 📘 EduWatch Backend – Smart AI Classroom System
-
-## 🔹 Overview
-
-The EduWatch Backend is a production-ready PostgreSQL-based attendance and timetable management system designed to integrate with the AI-powered Teacher Detection Module.
-
-This backend handles:
-
-- Teacher schedule validation
-- Real-time period detection
-- Substitution handling
-- Attendance logging
-- Wrong teacher detection
-- REST API endpoints for dashboard integration
-
-It ensures that attendance is marked **only after teacher identity verification and confirmation period validation**.
-
----
-
-# 🏗 Architecture Overview
-# 📘 EduWatch Backend – Smart AI Classroom System
-
-## 🔹 Overview
-
-The EduWatch Backend is a production-ready PostgreSQL-based attendance and timetable management system designed to integrate with the AI-powered Teacher Detection Module.
-
-This backend handles:
-
-- Teacher schedule validation
-- Real-time period detection
-- Substitution handling
-- Attendance logging
-- Wrong teacher detection
-- REST API endpoints for dashboard integration
-
-It ensures that attendance is marked **only after teacher identity verification and confirmation period validation**.
-
----
-
-# 🏗 Architecture Overview
-AI Module (Face Recognition)
-↓
-Attendance Engine
-↓
-PostgreSQL Database
-↓
-REST API (FastAPI)
-↓
-Admin Dashboard (Future)
-
-
----
-
-# 📂 Backend Folder Structure
-
-```
-backend/
-│
-├── database/
-│ ├── migrations/
-│ ├── seeds/
-│ ├── functions/
-│ ├── views/
-│ └── schema.sql
-│
-├── core/
-│ ├── db_connection.py
-│ ├── period_service.py
-│ ├── decision_engine.py
-│ ├── lock_manager.py
-│ └── attendance_engine.py
-│
-├── api/
-│ ├── app.py
-│ └── routes.py
-│
-└── requirements.txt
-```
-
----
-
-# 🗄 Database Design
-
-## The backend uses PostgreSQL with the following core tables:
-
-tables:
-- teachers
-- subjects
-- classes
-- timetable
-- teacher_substitution
-- attendance_log
-
-Views:
-- view_today_schedule
-- view_live_current_period
-- view_attendance_summary
-- view_wrong_teacher_logs
-- view_monthly_teacher_report
-
-Functions:
-- get_current_period()
-- check_substitution()
-- mark_attendance()
-
----
-
-# 🛠 Installation Guide
-
-## 1️⃣ Install PostgreSQL
-
-Download and install PostgreSQL:
-
-https://www.postgresql.org/download/
-
-Create database:
+## Testing and Quality Commands
 
 ```bash
-psql -U postgres
-CREATE DATABASE eduwatch;
-\q
+npm run lint
+npm run format
+npm run test
+npm run test:watch
+npm run test:e2e
+npm run test:cov
 ```
 
-# 📦 Backend Requirements
-```bash 
-psycopg2-binary==2.9.9
-fastapi==0.111.0
-uvicorn==0.30.1
-python-dotenv==1.0.1
-```
+## API Development Notes
 
-# 🗄 Database Initialization
+- CORS currently allows `http://localhost:3000`.
+- Global request validation is enabled.
+- Audit logging and rate limiting are enabled globally.
+- Keep `prisma/schema.prisma` and SQL objects in sync via scripts.
 
-## Navigate to:
+## Quick Health Check
+
+After startup, verify:
 
 ```bash
-backend/database/
+curl http://localhost:5000
 ```
 
-## Run schema:
+Check protected endpoints with bearer token:
 
 ```bash
-psql -U postgres -d eduwatch -f schema.sql
+curl -H "Authorization: Bearer <TOKEN>" http://localhost:5000/teachers
 ```
 
-## This will:
+## Troubleshooting
 
-- Create tables
-- Insert seed data
-- Create functions
-- Create views
+- If Prisma errors occur, verify `DATABASE_URL` and run `npm run db:generate`.
+- If SQL views/functions are missing, run `npm run db:apply-custom-sql`.
+- If port conflicts occur, update `PORT` in `.env`.
 
-# Drop Database
+## Related Docs
 
-```bash
-DROP DATABASE eduatch;
-```
-
-## if return the db is accesed
-
-```bash
-SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'eduwatch' AND pid <> pg_backend_pid();
-```
-
-# 🚀 Running the Backend API
-
-## Navigate to:
-
-```bash 
-backend/
-```
-
-## Run:
-
-```bah
-uvicorn api.app:app --reload
-```
-
-## Open in browser:
-
-```bash
-http://127.0.0.1:8000/docs
-```
-
-##  Swagger API documentation will be available.
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- `app/api/docs/QUICK_SETUP_GUIDE.md`
+- `app/api/docs/DATABASE_MANAGEMENT_GUIDE.md`
+- `app/api/scripts/README.md`

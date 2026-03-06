@@ -1,173 +1,67 @@
-# 📘 EduWatch Backend – Smart AI Classroom System
+# EduWatch Modules Documentation
 
-## 🔹 Overview
+This `app/` directory contains all major runtime modules of EduWatch.
 
-The EduWatch Backend is a production-ready PostgreSQL-based attendance and timetable management system designed to integrate with the AI-powered Teacher Detection Module.
+## Modules
 
-This backend handles:
+- `ai-service`: Python-based teacher activity detection and recognition pipeline
+- `api`: NestJS backend with Prisma + custom SQL integration
+- `web`: Next.js dashboard/client frontend
+- `app`: Flutter cross-platform client app
+- `database`: SQL schema, migrations, seeds, functions, and views
 
-- Teacher schedule validation
-- Real-time period detection
-- Substitution handling
-- Attendance logging
-- Wrong teacher detection
-- REST API endpoints for dashboard integration
+## Recommended Startup Order
 
-It ensures that attendance is marked **only after teacher identity verification and confirmation period validation**.
+1. Start PostgreSQL.
+2. Initialize database from `app/database`.
+3. Start backend API (`app/api`) on `http://localhost:5000`.
+4. Start web frontend (`app/web`) on `http://localhost:3000`.
+5. Start AI service (`app/ai-service/app/main.py`) which posts attendance to backend.
+6. Start Flutter app (`app/app`) if needed.
 
----
+## Run All Modules (Multi-Terminal)
 
-# 🏗 Architecture Overview
-# 📘 EduWatch Backend – Smart AI Classroom System
-
-## 🔹 Overview
-
-The EduWatch Backend is a production-ready PostgreSQL-based attendance and timetable management system designed to integrate with the AI-powered Teacher Detection Module.
-
-This backend handles:
-
-- Teacher schedule validation
-- Real-time period detection
-- Substitution handling
-- Attendance logging
-- Wrong teacher detection
-- REST API endpoints for dashboard integration
-
-It ensures that attendance is marked **only after teacher identity verification and confirmation period validation**.
-
----
-
-# 🏗 Architecture Overview
-AI Module (Face Recognition)
-↓
-Attendance Engine
-↓
-PostgreSQL Database
-↓
-REST API (FastAPI)
-↓
-Admin Dashboard (Future)
-
-
----
-
-# 📂 Backend Folder Structure
-
-```
-backend/
-│
-├── database/
-│ ├── migrations/
-│ ├── seeds/
-│ ├── functions/
-│ ├── views/
-│ └── schema.sql
-│
-├── core/
-│ ├── db_connection.py
-│ ├── period_service.py
-│ ├── decision_engine.py
-│ ├── lock_manager.py
-│ └── attendance_engine.py
-│
-├── api/
-│ ├── app.py
-│ └── routes.py
-│
-└── requirements.txt
-```
-
----
-
-# 🗄 Database Design
-
-## The backend uses PostgreSQL with the following core tables:
-
-tables:
-- teachers
-- subjects
-- classes
-- timetable
-- teacher_substitution
-- attendance_log
-
-Views:
-- view_today_schedule
-- view_live_current_period
-- view_attendance_summary
-- view_wrong_teacher_logs
-- view_monthly_teacher_report
-
-Functions:
-- get_current_period()
-- check_substitution()
-- mark_attendance()
-
----
-
-# 🛠 Installation Guide
-
-## 1️⃣ Install PostgreSQL
-
-Download and install PostgreSQL:
-
-https://www.postgresql.org/download/
-
-Create database:
+Use separate terminals from repo root (`EduWatch-Smart-AI-Classroom-System`):
 
 ```bash
-psql -U postgres
-CREATE DATABASE eduwatch;
-\q
+# Terminal 1 - API
+cd app/api
+npm install
+npm run db:full-setup
+npm run start:dev
 ```
-
-# 📦 Backend Requirements
-```bash 
-psycopg2-binary==2.9.9
-fastapi==0.111.0
-uvicorn==0.30.1
-python-dotenv==1.0.1
-```
-
-# 🗄 Database Initialization
-
-## Navigate to:
 
 ```bash
-backend/database/
+# Terminal 2 - Web
+cd app/web
+npm install
+npm run dev
 ```
-
-## Run schema:
 
 ```bash
-psql -U postgres -d eduwatch -f schema.sql
+# Terminal 3 - AI Service
+cd app/ai-service
+python -m venv .venv
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+cd app
+python main.py
 ```
 
-## This will:
-
-- Create tables
-- Insert seed data
-- Create functions
-- Create views
-
-# 🚀 Running the Backend API
-
-## Navigate to:
-
-```bash 
-backend/
-```
-
-## Run:
-
-```bah
-uvicorn api.app:app --reload
-```
-
-## Open in browser:
+Important: AI service backend URL is configured in `app/ai-service/app/client/backend_client.py`. If your API runs on `http://localhost:5000`, update `API_URL` accordingly before starting AI service.
 
 ```bash
-http://127.0.0.1:8000/docs
+# Terminal 4 - Flutter App (optional)
+cd app/app
+flutter pub get
+flutter run
 ```
 
-##  Swagger API documentation will be available.
+## Module Documentation
+
+- AI service docs: `app/ai-service/Readme.md`
+- API docs: `app/api/README.md`
+- Web docs: `app/web/README.md`
+- Flutter docs: `app/app/README.md`
+- Database docs: `app/database/README.md`

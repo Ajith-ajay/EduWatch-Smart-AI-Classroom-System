@@ -1,16 +1,81 @@
-# app
+# EduWatch Flutter App
 
-A new Flutter project.
+This module is the Flutter client application for EduWatch. It can target Android, iOS, web, and desktop platforms and is intended to consume the EduWatch backend APIs.
 
-## Getting Started
+## Prerequisites
 
-This project is a starting point for a Flutter application.
+- Flutter SDK (compatible with Dart SDK `^3.5.3`)
+- Android Studio/Xcode/desktop toolchains depending on target
+- Backend API running (`app/api`)
 
-A few resources to get you started if this is your first Flutter project:
+## Folder Structure
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```text
+app/
+├── lib/                  # Flutter source code
+├── android/
+├── ios/
+├── web/
+├── windows/
+├── linux/
+├── macos/
+├── test/
+└── pubspec.yaml
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Setup Commands
+
+From repository root:
+
+```bash
+cd app/app
+flutter pub get
+```
+
+Check environment:
+
+```bash
+flutter doctor
+```
+
+## Run Commands
+
+Run on connected/default device:
+
+```bash
+flutter run
+```
+
+Run on a specific target:
+
+```bash
+flutter run -d android
+flutter run -d chrome
+flutter run -d windows
+```
+
+## Build Commands
+
+```bash
+flutter build apk
+flutter build appbundle
+flutter build web
+flutter build windows
+```
+
+## Test and Lint Commands
+
+```bash
+flutter test
+flutter analyze
+```
+
+## Integration Notes
+
+- Ensure backend API URL used by the app points to your running `app/api` instance.
+- If you run API and app on different networks/devices, update the base URL to a reachable host IP.
+
+## Common Issues
+
+- If dependencies fail: run `flutter clean` then `flutter pub get`.
+- If emulator is not detected: verify platform-specific SDK setup with `flutter doctor`.
