@@ -360,11 +360,11 @@ export default function TeacherSubstitutionPage() {
                       </div>
                       <div className="flex justify-between items-center pb-3 border-b border-zinc-300">
                         <span className="text-zinc-600">From Teacher</span>
-                        <span className="font-semibold text-zinc-900">{fromTeacher.full_name}</span>
+                        <span className="font-semibold text-zinc-900">{fromTeacher?.full_name}</span>
                       </div>
                       <div className="flex justify-between items-center pb-3 border-b border-zinc-300">
                         <span className="text-zinc-600">To Teacher</span>
-                        <span className="font-semibold text-zinc-900">{toTeacher.full_name}</span>
+                        <span className="font-semibold text-zinc-900">{toTeacher?.full_name}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-zinc-600">Date</span>

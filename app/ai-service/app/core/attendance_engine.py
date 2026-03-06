@@ -3,7 +3,7 @@ from core.db_connection import execute_query
 from core.decision_engine import decide_status
 from core.lock_manager import LockManager
 
-lock_manager = LockManager(confirm_duration=60)     # 60 seconds confirmation duration
+lock_manager = LockManager(confirm_duration=1)     # 60 seconds confirmation duration
 
 marked_periods = set()
 
@@ -59,6 +59,7 @@ def process_attendance(detected_teacher_id, confidence_score):
 
     # 🚫 If already marked and no teacher change, skip
     if attendance_marked and status in ["PRESENT", "SUBSTITUTE"]:
+        print("Attendance already marked for this period, skipping.")
         return
 
     if locked:

@@ -34,22 +34,17 @@ class TeacherRecognizer:
 
         boxes = face_recognition.face_locations(rgb_for_detection, model="hog")
 
-        encodings = face_recognition.face_encodings(
-            rgb_original,   # ← use original color image
-            boxes,
-            model="large"
-        )
+        encodings = face_recognition.face_encodings(rgb_original, boxes, model="large")
 
         teacher_detected = False
         teacher_name = None
         teacher_id = None
         similarity_score = 0.0
+        face_bbox = None
 
         for encoding, box in zip(encodings, boxes):
 
-            # Calculate distances
-            distances = face_recognition.face_distance(
-                self.known_encodings, encoding)
+            distances = face_recognition.face_distance(self.known_encodings, encoding)
 
             if len(distances) == 0:
                 continue
@@ -60,26 +55,15 @@ class TeacherRecognizer:
             if best_distance >= self.tolerance:
                 continue
 
-            # if best_distance < self.tolerance:
-
-            sorted_distances = np.sort(distances)
-            if len(sorted_distances) > 1:
-                if (sorted_distances[1] - sorted_distances[0]) < 0.04:
-                    continue  # ambiguous
-
             teacher_detected = True
             teacher_name = self.known_names[best_match_index]
             teacher_id = self.known_ids[best_match_index]
 
-            # Convert distance to confidence %
             similarity_score = (1 - best_distance) * 100
 
             top, right, bottom, left = box
-            face_width = right - left
-            face_height = bottom - top
+            face_bbox = (left, top, right, bottom)
 
-            if face_width < 80 or face_height < 80:
-                continue
 
             cv2.rectangle(frame,
                             (left, top),
@@ -96,7 +80,7 @@ class TeacherRecognizer:
 
             break  # Stop after first valid teacher match
 
-        return teacher_detected, teacher_name, teacher_id, similarity_score, frame
+        return teacher_detected, teacher_name, teacher_id, similarity_score, frame, face_bbox
     
 
 
@@ -141,6 +125,7 @@ class TeacherRecognizerArcFace:
 
             box = face.bbox.astype(int)
             x1, y1, x2, y2 = box
+            face_bbox = (x1, y1, x2, y2)
 
             # Minimum face size filter
             if (x2 - x1) < 80 or (y2 - y1) < 80:
@@ -185,4 +170,4 @@ class TeacherRecognizerArcFace:
 
             break
 
-        return teacher_detected, teacher_name, teacher_id, similarity_score, frame
+        return teacher_detected, teacher_name, teacher_id, similarity_score, frame, face_bbox
