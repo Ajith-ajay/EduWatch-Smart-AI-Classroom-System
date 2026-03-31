@@ -2,7 +2,16 @@ import os
 import time
 import cv2
 import threading
+import logging
 from queue import Queue
+
+# Configure logging for model conclusion
+logging.basicConfig(
+    filename='eduwatch_activity.log',
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 from utils.config import CAMERA_INDEX, WINDOW_NAME
 
@@ -14,6 +23,30 @@ from services.voice_detector import VoiceDetector
 from services.teaching_activity_engine import TeachingActivityEngine
 from services.recognizer import TeacherRecognizerArcFace, TeacherRecognizer
 from client.backend_client import send_attendance
+
+class TeacherSessionManager:
+    def __init__(self, timeout_seconds=1800): # 30 mins session lock
+        self.cached_teacher_id = None
+        self.cached_teacher_name = None
+        self.cached_confidence = 0.0
+        self.last_seen_time = 0
+        self.timeout = timeout_seconds
+
+    def update(self, detected, name, tid, conf):
+        now = time.time()
+        if detected:
+            self.cached_teacher_name = name
+            self.cached_teacher_id = tid
+            self.cached_confidence = conf
+            self.last_seen_time = now
+            return True, name, tid, conf
+        
+        if self.cached_teacher_id and (now - self.last_seen_time < self.timeout):
+            return True, self.cached_teacher_name, self.cached_teacher_id, self.cached_confidence
+        
+        return False, None, None, 0.0
+
+session_manager = TeacherSessionManager()
 
 # Frame processing
 PROCESS_EVERY_N_FRAMES = 3
@@ -44,12 +77,17 @@ def detection_worker(frame_queue, recognizer, voice_detector, teaching_activity_
             break
 
         # Teacher recognition (must return id + confidence)
-        teacher_detected, teacher_name, teacher_id, similarity_score, _, face_bbox = recognizer.recognize(frame)
+        raw_detected, raw_name, raw_id, raw_score, _, face_bbox = recognizer.recognize(frame)
+
+        # Apply Session Caching
+        active_teacher, active_name, active_id, active_score = session_manager.update(
+            raw_detected, raw_name, raw_id, raw_score
+        )
 
         yaw, pitch = 0, 0
         facing_forward = False
 
-        if teacher_detected and face_bbox is not None:
+        if raw_detected and face_bbox is not None:
 
             x1, y1, x2, y2 = face_bbox
 
@@ -66,7 +104,7 @@ def detection_worker(frame_queue, recognizer, voice_detector, teaching_activity_
 
         # status, color = decide(teacher_detected, person, gesture, voice)
         teaching_score, status, color = teaching_activity_engine.update(
-            teacher=teacher_detected,
+            teacher=active_teacher,
             gesture=gesture,
             speech=voice,
             person=person,
@@ -76,10 +114,10 @@ def detection_worker(frame_queue, recognizer, voice_detector, teaching_activity_
 
         with detection_lock:
             latest_detections.update({
-                'teacher_detected': teacher_detected,
-                'teacher_name': teacher_name,
-                'teacher_id': teacher_id,
-                'confidence_score': similarity_score,
+                'teacher_detected': active_teacher,
+                'teacher_name': active_name,
+                'teacher_id': active_id,
+                'confidence_score': active_score,
                 'person_detected': person,
                 'gesture_detected': gesture,
                 'teaching_score': teaching_score,
@@ -108,6 +146,7 @@ def main():
     prev = time.time()
     frame_count = 0
     last_api_call = 0
+    last_logged_status = None
 
     recognizerArcFace = TeacherRecognizerArcFace()
     recognizer = TeacherRecognizer()
@@ -149,15 +188,22 @@ def main():
             status = latest_detections['status']
             color = latest_detections['color']
 
+        # Log status changes
+        if status != last_logged_status and status != 'Initializing...':
+            logging.info(f"Activity Status Changed: {status} | Score: {teaching_score:.2f} | Teacher: {teacher_name or 'None'}")
+            last_logged_status = status
+
         # 🔥 Controlled backend call (every 5 seconds only)
         if time.time() - last_api_call > API_CALL_INTERVAL:
 
             if teacher_detected:
+                logging.info(f"API CALL: Sending attendance for {teacher_name} (ID: {teacher_id}) with confidence {confidence_score:.2f}")
                 send_attendance(
                     detected_teacher_id=teacher_id,
                     confidence_score=confidence_score
                 )
             else:
+                logging.info(f"API CALL: No active teacher. Sending null attendance.")
                 send_attendance(
                     detected_teacher_id=None,
                     confidence_score=0.0

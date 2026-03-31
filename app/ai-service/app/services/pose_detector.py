@@ -27,8 +27,15 @@ def detect_gesture(frame):
 
         right_wrist = landmarks[mp_pose.PoseLandmark.RIGHT_WRIST]
         left_wrist = landmarks[mp_pose.PoseLandmark.LEFT_WRIST]
+        right_shoulder = landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER]
+        left_shoulder = landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER]
 
-        # Use normalized coordinates
+        # Check if wrist is raised (y goes down from 0 to 1, so smaller y is higher)
+        # We consider gesture active if the hand is raised near or above shoulder
+        if (right_wrist.y < right_shoulder.y + 0.1) or (left_wrist.y < left_shoulder.y + 0.1):
+            gesture_active = True
+
+        # Track significant sudden movement
         current_position = (
             (right_wrist.x + left_wrist.x) / 2,
             (right_wrist.y + left_wrist.y) / 2
@@ -45,7 +52,7 @@ def detect_gesture(frame):
                 (curr[1] - prev[1])**2
             )
 
-            if movement > MOVEMENT_THRESHOLD:
+            if movement > (MOVEMENT_THRESHOLD + 0.03): # Stricter movement threshold to avoid fidgeting
                 gesture_active = True
 
         mp_draw.draw_landmarks(

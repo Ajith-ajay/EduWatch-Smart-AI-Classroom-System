@@ -49,35 +49,39 @@ class TeachingActivityEngine:
         person_score = sum(self.person_buffer)/len(self.person_buffer)
         head_pose_score = sum(self.head_pose_buffer)/len(self.head_pose_buffer)
 
+        # New weights suitable for back-facing camera
         teaching_score = (
-            0.35 * speech_score +
-            0.25 * gesture_score +
-            0.15 * head_pose_score +
-            0.15 * teacher_score +
-            0.10 * person_score
+            0.30 * speech_score +
+            0.30 * gesture_score +
+            0.25 * person_score +   # Heavily rely on person being in the teacher zone
+            0.10 * teacher_score +  # Subsidized by cache mechanism
+            0.05 * head_pose_score  # De-emphasize head pose since back of head is common
         )
 
-        if speech_score < 0.2 and head_pose_score < 0.4:
+        # Baseline checks
+        if person_score < 0.2:
+            status = "INACTIVE (NO TEACHER)"
+        elif speech_score < 0.2 and gesture_score < 0.2:
             status = "INACTIVE TEACHING"
-        
-        if head_state == "LOOKING_SIDE" and speech:
-            status = "EXPLAINING ON BOARD"
+        else:
+            status = "TEACHING ACTIVE"
 
-        if teaching_score > 0.65:
+        # If they are facing board but gesturing and present, they are teaching
+        if person_score > 0.5 and (gesture_score > 0.4 or speech_score > 0.4):
+            status = "TEACHING ACTIVE"
+
+        if teaching_score > 0.60 or status == "TEACHING ACTIVE":
             if self.active_start_time is None:
                 self.active_start_time = time.time()
-
-            elif time.time() - self.active_start_time > 10:     # Must be active for 10 seconds to confirm
+            elif time.time() - self.active_start_time > 8:     # Confirm after 8 secs
                 self.confirmed_teaching = True
         else:
             self.active_start_time = None
             self.confirmed_teaching = False
 
         if self.confirmed_teaching:
-            return teaching_score, "TEACHING ACTIVE", (0,255,0)
-
-        elif teaching_score > 0.4:
+            return teaching_score, status if status == "TEACHING ACTIVE" else "TEACHING ACTIVE", (0,255,0)
+        elif teaching_score > 0.35:
             return teaching_score, "LIKELY TEACHING", (0,255,255)
-
         else:
-            return teaching_score, "NOT TEACHING", (0,0,255)
+            return teaching_score, status, (0,0,255)
