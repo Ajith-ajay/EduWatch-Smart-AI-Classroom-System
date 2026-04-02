@@ -23,6 +23,7 @@ from services.voice_detector import VoiceDetector
 from services.teaching_activity_engine import TeachingActivityEngine
 from services.recognizer import TeacherRecognizerArcFace, TeacherRecognizer
 from client.backend_client import send_attendance
+from core.period_service import get_current_period
 
 class TeacherSessionManager:
     def __init__(self, timeout_seconds=1800): # 30 mins session lock
@@ -31,20 +32,73 @@ class TeacherSessionManager:
         self.cached_confidence = 0.0
         self.last_seen_time = 0
         self.timeout = timeout_seconds
+        
+        # Period Tracking
+        self.current_period_id = None
+        self.expected_teachers = []
+        self.last_db_check = 0
 
     def update(self, detected, name, tid, conf):
         now = time.time()
+        
+        # Timetable Polling: Check every 10 seconds to avoid DB overload
+        if now - self.last_db_check > 10:
+            self.last_db_check = now
+            try:
+                period = get_current_period()
+            except Exception as e:
+                logging.error(f"Error fetching period: {e}")
+                period = None
+                
+            if period:
+                period_id = period.get("timetable_id")
+                # 1. Period change -> Clear old session immediately
+                if self.current_period_id is not None and period_id != self.current_period_id:
+                    logging.info(f"Period changed from {self.current_period_id} to {period_id}. Clearing session.")
+                    self.cached_teacher_id = None
+                    self.cached_teacher_name = None
+                    
+                self.current_period_id = period_id
+                
+                # Build list of expected teachers (scheduled + substitute)
+                t1 = period.get("teacher_id")
+                t2 = period.get("substitute_teacher_id")
+                self.expected_teachers = []
+                if t1: self.expected_teachers.append(str(t1))
+                if t2: self.expected_teachers.append(str(t2))
+            else:
+                self.current_period_id = None
+                self.expected_teachers = []
+
         if detected:
-            self.cached_teacher_name = name
-            self.cached_teacher_id = tid
-            self.cached_confidence = conf
-            self.last_seen_time = now
-            return True, name, tid, conf
+            str_tid = str(tid)
+            # 2. Multi-Teacher / Intruder Logic
+            if self.cached_teacher_id and str_tid != str(self.cached_teacher_id):
+                # We have a session, but detected a DIFFERENT face
+                if str_tid in self.expected_teachers:
+                    # New face is the Timetable expected teacher! Overwrite the intruder.
+                    logging.info(f"Expected teacher {name} ({tid}) entered. Overriding session.")
+                    self._set_cache(name, tid, conf, now)
+                else:
+                    # New face is an Intruder / Instruction-Giver. Ignore them unless session timed out.
+                    if now - self.last_seen_time > self.timeout:
+                        logging.info(f"Session timed out. Setting {name} as new teacher.")
+                        self._set_cache(name, tid, conf, now)
+                    # Else implicitly ignored to preserve the active session.
+            else:
+                # Normal update (same teacher, or fresh setup)
+                self._set_cache(name, tid, conf, now)
         
         if self.cached_teacher_id and (now - self.last_seen_time < self.timeout):
             return True, self.cached_teacher_name, self.cached_teacher_id, self.cached_confidence
         
         return False, None, None, 0.0
+
+    def _set_cache(self, name, tid, conf, now):
+        self.cached_teacher_name = name
+        self.cached_teacher_id = tid
+        self.cached_confidence = conf
+        self.last_seen_time = now
 
 session_manager = TeacherSessionManager()
 
