@@ -81,9 +81,6 @@ class TeacherRecognizer:
             break  # Stop after first valid teacher match
 
         return teacher_detected, teacher_name, teacher_id, similarity_score, frame, face_bbox
-    
-
-
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PKL_PATH_ARC = os.path.join(BASE_DIR, "..", "models", "teacher_arcface.pkl")

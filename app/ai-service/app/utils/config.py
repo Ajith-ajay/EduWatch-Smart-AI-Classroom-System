@@ -2,9 +2,9 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[4]
 
-# CAMERA_INDEX = str(BASE_DIR / "data" / "test" / "video" / "teaching.mp4")
+CAMERA_INDEX = str(BASE_DIR / "data" / "test" / "video" / "teaching.mp4")
 
-CAMERA_INDEX = 0  # Default to first webcam
+# CAMERA_INDEX = 0  # Default to first webcam
 
 VOICE_THRESHOLD = 5
 

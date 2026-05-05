@@ -252,16 +252,18 @@ def main():
 
             if teacher_detected:
                 logging.info(f"API CALL: Sending attendance for {teacher_name} (ID: {teacher_id}) with confidence {confidence_score:.2f}")
-                send_attendance(
-                    detected_teacher_id=teacher_id,
-                    confidence_score=confidence_score
-                )
+                threading.Thread(
+                    target=send_attendance,
+                    kwargs={"detected_teacher_id": teacher_id, "confidence_score": confidence_score},
+                    daemon=True
+                ).start()
             else:
                 logging.info(f"API CALL: No active teacher. Sending null attendance.")
-                send_attendance(
-                    detected_teacher_id=None,
-                    confidence_score=0.0
-                )
+                threading.Thread(
+                    target=send_attendance,
+                    kwargs={"detected_teacher_id": None, "confidence_score": 0.0},
+                    daemon=True
+                ).start()
 
             last_api_call = time.time()
 
